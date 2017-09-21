@@ -175,6 +175,40 @@ plot_hexbin = function(df, xcol, ycol, numbins = 30,
   return(p)
 }
 
+plot_point = function(df, xcol, ycol, varcol, lineColours = NULL,
+                     xlab, breaks_for_x = waiver(), limits_for_x = NULL, 
+                     ylab, breaks_for_y = waiver(), limits_for_y = NULL, 
+                     title = NULL, fontsize = 22, outfile = NULL){
+  
+  x <- df[[xcol]]
+  y <- df[[ycol]]
+  colour <- df[[varcol]]
+  
+  p <- ggplot(data = df, aes(x = x, y = y, colour = colour), 
+              environment = environment())
+  
+  p <- p + xlab(xlab) + ylab(ylab)
+  p <- p + guides(colour = FALSE)
+  
+  if(!is.null(lineColours)){
+    p <- p + scale_color_manual(values = lineColours)  
+  }
+  
+  #p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
+  
+  p <- p + scale_x_continuous(breaks=breaks_for_x)
+  p <- p + scale_y_continuous(breaks=breaks_for_y)
+  p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
+  
+  p <- p + geom_point()
+  
+  p <- p + ggtitle(title)
+  p <- p + theme_bw(base_size = fontsize)
+  
+  print_plot(p,outfile)
+  return(p)
+}
+
 
 plot_line_2vars = function(df, xcol, ycol, breaks_for_x = waiver(), 
                            limits_for_x = NULL, breaks_for_y = waiver(), 
