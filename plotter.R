@@ -72,7 +72,8 @@ plot_points_2vars = function(df, xcol, ycol, breaks_for_x = waiver(), limits_for
 plot_line = function(df, xcol, ycol, varcol, lineColours = NULL,
                      xlab, breaks_for_x = waiver(), limits_for_x = NULL, 
                      ylab, breaks_for_y = waiver(), limits_for_y = NULL, 
-                     smooth = FALSE, title = NULL, fontsize = 22, outfile = NULL){
+                     showpoints = FALSE, smooth = FALSE, title = NULL, 
+                     fontsize = 22, outfile = NULL){
   
   x <- df[[xcol]]
   y <- df[[ycol]]
@@ -81,13 +82,13 @@ plot_line = function(df, xcol, ycol, varcol, lineColours = NULL,
   p <- ggplot(data = df, aes(x = x, y = y, colour = colour), environment = environment())
  
   p <- p + xlab(xlab) + ylab(ylab)
-  p <- p + guides(colour = FALSE)
+  #p <- p + guides(colour = FALSE)
   
   if(!is.null(lineColours)){
     p <- p + scale_color_manual(values = lineColours)  
   }
 
-  #p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
+  p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
   
   p <- p + scale_x_continuous(breaks=breaks_for_x)
   p <- p + scale_y_continuous(breaks=breaks_for_y)
@@ -98,7 +99,74 @@ plot_line = function(df, xcol, ycol, varcol, lineColours = NULL,
   }
   else{
     p <- p + geom_line()
+    if(showpoints == TRUE){
+      p <- p + geom_point()
+    }
   }
+  
+  p <- p + ggtitle(title)
+  p <- p + theme_bw(base_size = fontsize)
+  
+  print_plot(p,outfile)
+  return(p)
+}
+
+plot_bubble = function(df, xcol, ycol, sizecol, 
+                     xlab, breaks_for_x = waiver(), limits_for_x = NULL, 
+                     ylab, breaks_for_y = waiver(), limits_for_y = NULL, 
+                     title = NULL, smooth = FALSE,
+                     fontsize = 22, outfile = NULL){
+  
+  x <- df[[xcol]]
+  y <- df[[ycol]]
+  size <- df[[sizecol]]
+  
+  p <- ggplot(data = df, aes(x = x, y = y, size = size), environment = environment())
+  
+  p <- p + xlab(xlab) + ylab(ylab)
+  
+  p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
+  
+  p <- p + scale_x_continuous(breaks=breaks_for_x)
+  p <- p + scale_y_continuous(breaks=breaks_for_y)
+  p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
+
+  if(smooth == TRUE){
+    p <- p + geom_smooth()
+  }
+  
+  p <- p + geom_point(shape = 21, alpha = 0.7, colour = "#1e6c7b", fill = "#40b8d0")
+  p <- p + ggtitle(title)
+  p <- p + theme_bw(base_size = fontsize)
+  
+  print_plot(p,outfile)
+  return(p)
+}
+
+
+plot_hexbin = function(df, xcol, ycol, numbins = 30,
+                     xlab, breaks_for_x = waiver(), limits_for_x = NULL, 
+                     ylab, breaks_for_y = waiver(), limits_for_y = NULL, 
+                     title = NULL, 
+                     fontsize = 22, outfile = NULL){
+  
+  x <- df[[xcol]]
+  y <- df[[ycol]]
+  
+  p <- ggplot(data = df, aes(x = x, y = y), environment = environment())
+  
+  p <- p + xlab(xlab) + ylab(ylab)
+  #p <- p + guides(colour = FALSE)
+  
+  p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
+  
+  p <- p + scale_x_continuous(breaks=breaks_for_x)
+  p <- p + scale_y_continuous(breaks=breaks_for_y)
+  p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
+  
+  p <- p + geom_hex(bins = numbins, colour = "grey")
+  p <- p + scale_fill_gradient(low = "#ffe8e8", high = "#990000")
+  #p <- p + scale_fill_gradient(low = "white", high = "black")
   
   p <- p + ggtitle(title)
   p <- p + theme_bw(base_size = fontsize)
@@ -218,13 +286,30 @@ plot_histogram_categorical = function(df, col, binwidth = NULL, breaks_for_y = w
   
 }
 
-plot_boxplot_1var = function(df, col, transformation = "identity", breaks_for_y = waiver(), limits_for_y = NULL, title = NULL){
+plot_boxplot_1var = function(df, col, transformation = "identity", 
+                             xticklab = NULL, xlab = NULL, ylab = NULL,
+                             breaks_for_y = waiver(), 
+                             limits_for_y = NULL, title = NULL){
   
   data <- df[[col]]
   
   p <- ggplot(df, aes(x=factor(col, levels = unique(col)),y=data), environment = environment()) 
   p <- p + geom_boxplot()
+  
   p <- p + scale_y_continuous(breaks=breaks_for_y, trans = transformation)
+  
+  if(!is.null(xticklab)){
+    p <- p + scale_x_discrete(labels=xticklab)
+  }
+  
+  if(!is.null(xlab)){
+    p <- p + xlab(xlab)  
+  }
+  
+  if(!is.null(ylab)){
+    p <- p + ylab(ylab)  
+  }
+  
   p <- p + coord_cartesian(ylim = limits_for_y)
   p <- p + ggtitle(title)
   p <- p + xlab(NULL)
