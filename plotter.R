@@ -112,8 +112,9 @@ plot_line = function(df, xcol, ycol, varcol, lineColours = NULL,
 }
 
 plot_bubble = function(df, xcol, ycol, sizecol, 
-                     xlab, breaks_for_x = waiver(), limits_for_x = NULL, 
-                     ylab, breaks_for_y = waiver(), limits_for_y = NULL, 
+                     xlab = xcol, breaks_for_x = waiver(), limits_for_x = NULL, 
+                     ylab = ycol, breaks_for_y = waiver(), limits_for_y = NULL, 
+                     sizelab = sizecol,
                      title = NULL, smooth = FALSE,
                      fontsize = 22, outfile = NULL){
   
@@ -124,6 +125,7 @@ plot_bubble = function(df, xcol, ycol, sizecol,
   p <- ggplot(data = df, aes(x = x, y = y, size = size), environment = environment())
   
   p <- p + xlab(xlab) + ylab(ylab)
+  p <- p + labs(size=sizelab)
   
   p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
   
@@ -145,8 +147,8 @@ plot_bubble = function(df, xcol, ycol, sizecol,
 
 
 plot_hexbin = function(df, xcol, ycol, numbins = 30,
-                     xlab, breaks_for_x = waiver(), limits_for_x = NULL, 
-                     ylab, breaks_for_y = waiver(), limits_for_y = NULL, 
+                     xlab = NULL, breaks_for_x = waiver(), limits_for_x = NULL, 
+                     ylab = NULL, breaks_for_y = waiver(), limits_for_y = NULL, 
                      title = NULL, 
                      fontsize = 22, outfile = NULL){
   
@@ -251,8 +253,11 @@ plot_line_3vars = function(df, xcol, ycol, zcol, limits_for_y = NULL, title){
   #plot(df[,xcol], df[,ycol], type='b', main = title)
 }
 
-plot_histogram =  function(df, datacol, breaks_for_x = waiver(), trim = TRUE,
+
+plot_histogram =  function(df, datacol, breaks_for_x = NULL, trim = TRUE,
                          xlab = NULL, ylab = NULL, type = "frequency",
+                         space_between_bars = 0.1,
+                         xticklab = NULL,
                          limits_for_x = NULL, breaks_for_y = waiver(), 
                          limits_for_y = NULL, title = NULL, outfile = NULL,
                          fontsize = 22){
@@ -263,7 +268,7 @@ plot_histogram =  function(df, datacol, breaks_for_x = waiver(), trim = TRUE,
   #Building the dataset
   df = data.table(table(data))
   setnames(df,c("data","N"),c("label","value"))
-  df$label = as.integer(df$label)
+  #df$label = as.integer(df$label)
   
   if(type == "frequency"){
     if(is.null(ylab)) ylab = "Frequency"
@@ -289,14 +294,22 @@ plot_histogram =  function(df, datacol, breaks_for_x = waiver(), trim = TRUE,
   }
   
   p <- ggplot(df, aes(x=label,y=value))
+  p <- p + geom_col(colour="black", fill="white", width = 1 - space_between_bars)
   
-  #p <- p + histogram
+  if(!is.null(breaks_for_x)){
+    p <- p + scale_x_continuous(breaks=breaks_for_x)
+    p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
+  }
+  else{
+    p <- p + coord_cartesian(ylim = limits_for_y)
+  }
   
-  p <- p + geom_col(colour="black", fill="white", width = 1)
+  if(!is.null(xticklab)){
+    p <- p + scale_x_discrete(labels=xticklab)
+  }
   
-  p <- p + scale_x_continuous(breaks=breaks_for_x) 
   p <- p + scale_y_continuous(breaks=breaks_for_y)
-  p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
+  
   
   p <- p + ggtitle(title)
   p <- p + xlab(xlab) + ylab(ylab)
@@ -306,12 +319,13 @@ plot_histogram =  function(df, datacol, breaks_for_x = waiver(), trim = TRUE,
   print_plot(p,outfile)
 }
 
-plot_histogram_categorical = function(df, col, binwidth = NULL, breaks_for_y = waiver(), limits_for_y = NULL, title){
+plot_histogram_categorical = function(df, col, binwidth = NULL, breaks_for_y = waiver(), 
+                                      limits_for_y = NULL, title = NULL, outfile = NULL){
   
   data <- df[[col]]
   
   p <- ggplot(df, aes(x=data), environment = environment()) 
-  p <- p + geom_histogram(binwidth=binwidth, colour="black", fill="white")
+  p <- p + geom_bar(binwidth=binwidth, colour="black", fill="white")
   p <- p + scale_y_continuous(breaks=breaks_for_y, limits=limits_for_y)
   p <- p + ggtitle(title)
   p <- p + theme_bw() 
@@ -323,7 +337,7 @@ plot_histogram_categorical = function(df, col, binwidth = NULL, breaks_for_y = w
 plot_boxplot_1var = function(df, col, transformation = "identity", 
                              xticklab = NULL, xlab = NULL, ylab = NULL,
                              breaks_for_y = waiver(), 
-                             limits_for_y = NULL, title = NULL){
+                             limits_for_y = NULL, title = NULL, outfile = NULL){
   
   data <- df[[col]]
   
@@ -349,13 +363,13 @@ plot_boxplot_1var = function(df, col, transformation = "identity",
   p <- p + xlab(NULL)
   p <- p + theme_bw() 
   
-  print_plot(p,title)
+  print_plot(p,outfile)
 
 }
 
 plot_boxplot_2vars = function(df, xcol, ycol, groupcol = NULL, limits_for_x = NULL, 
                               xlab = xcol, ylab = ycol, grouplab = groupcol, xticklab = NULL,
-                              breaks_for_y = waiver(), limits_for_y = NULL,  
+                              breaks_for_y = waiver(), limits_for_y = NULL, trans_for_y = "identity",
                               title = NULL, outfile = NULL, fontsize = 22){
   
   vars <- df[[xcol]]
@@ -371,7 +385,8 @@ plot_boxplot_2vars = function(df, xcol, ycol, groupcol = NULL, limits_for_x = NU
   
   p <- ggplot(df, aesthetics, environment = environment()) 
   p <- p + geom_boxplot()
-  p <- p + scale_y_continuous(breaks=breaks_for_y)
+  
+  p <- p + scale_y_continuous(breaks=breaks_for_y, trans = trans_for_y)
   
   if(!is.null(xticklab)){
     p <- p + scale_x_discrete(labels=xticklab)
@@ -379,10 +394,6 @@ plot_boxplot_2vars = function(df, xcol, ycol, groupcol = NULL, limits_for_x = NU
   
   if(!is.null(groupcol)){
     p <- p + scale_fill_grey(name=grouplab, start = 0.5, end = 1)
-  }
-  
-  if(is.null(limits_for_y)){
-    limits_for_y = c(min(breaks_for_y),max(breaks_for_y))
   }
   
   p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
@@ -398,14 +409,15 @@ plot_boxplot_2vars = function(df, xcol, ycol, groupcol = NULL, limits_for_x = NU
 #TODO: Remove the beanplot functions
 plot_violin = function(df, xcol = NULL, ycol, groupcol = NULL, 
                        xlab = xcol, ylab = ycol, grouplab = groupcol, 
-                       xticklab = NULL, trim = TRUE,
+                       xticklab = NULL, trim = TRUE, split = FALSE,
                        limits_for_y = NULL, breaks_for_y = waiver(), 
                        showboxplot = FALSE, boxplot_width = 0.1, 
+                       dodge_width = 0.9, scale = "area",
                        transformation = "identity", labels = waiver(),
                        outfile = NULL, title = NULL, fontsize = 22){
   
   #Sets the dodge (space between plots from the same group)
-  dodge <- position_dodge(width = 0.9)
+  dodge <- position_dodge(width = dodge_width)
   
   #Prepares the data
   data <- df[[ycol]]
@@ -432,16 +444,22 @@ plot_violin = function(df, xcol = NULL, ycol, groupcol = NULL,
   p <- ggplot(data = df, aesthetics) 
   
   #Adds the violin plot
-  p <- p + geom_violin(position = dodge, trim = trim, colour = "black")
-  
-  #Adds the boxplot if requested
-  if(showboxplot == TRUE){
-    p = p + geom_boxplot(width=boxplot_width, outlier.size = 1, position = dodge)  
+  if(split == FALSE){
+    p <- p + geom_violin(position = dodge, scale = scale, trim = trim, colour = "black")  
+    
+    #Adds the boxplot if requested
+    if(showboxplot == TRUE){
+      p = p + geom_boxplot(width=boxplot_width, outlier.size = 1, position = dodge)  
+    }
+    #Otherwise, add a point to denote the median
+    else{
+      p <- p + stat_summary(fun.y="median", geom="point",
+                            position = dodge)
+    }
+    
   }
-  #Otherwise, add a point to denote the median
   else{
-    p <- p + stat_summary(fun.y="median", geom="point",
-                          position = dodge)
+    p <- p + geom_split_violin(scale = scale)
   }
   
   p <- p + coord_cartesian(ylim = limits_for_y)
@@ -461,6 +479,33 @@ plot_violin = function(df, xcol = NULL, ycol, groupcol = NULL,
   
   p <- p + theme_bw(base_size = fontsize) 
   print_plot(p,outfile)
+}
+
+
+
+GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin, draw_group = function(self, data, ..., draw_quantiles = NULL){
+  data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
+  grp <- data[1,'group']
+  newdata <- plyr::arrange(transform(data, x = if(grp%%2==1) xminv else xmaxv), if(grp%%2==1) y else -y)
+  newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
+  newdata[c(1,nrow(newdata)-1,nrow(newdata)), 'x'] <- round(newdata[1, 'x']) 
+  if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
+    stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <= 
+                                              1))
+    quantiles <- create_quantile_segment_frame(data, draw_quantiles)
+    aesthetics <- data[rep(1, nrow(quantiles)), setdiff(names(data), c("x", "y")), drop = FALSE]
+    aesthetics$alpha <- rep(1, nrow(quantiles))
+    both <- cbind(quantiles, aesthetics)
+    quantile_grob <- GeomPath$draw_panel(both, ...)
+    ggplot2:::ggname("geom_split_violin", grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
+  }
+  else {
+    ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
+  }
+})
+
+geom_split_violin <- function (mapping = NULL, data = NULL, stat = "ydensity", position = "identity", ..., draw_quantiles = NULL, trim = TRUE, scale = "area", na.rm = FALSE, show.legend = NA, inherit.aes = TRUE) {
+  layer(data = data, mapping = mapping, stat = stat, geom = GeomSplitViolin, position = position, show.legend = show.legend, inherit.aes = inherit.aes, params = list(trim = trim, scale = scale, draw_quantiles = draw_quantiles, na.rm = na.rm, ...))
 }
 
 plot_beanplot = function(df, xcol, ycol, limits_for_y = NULL, title = NULL, outfile = NULL){
@@ -503,7 +548,12 @@ plot_beanplot_singlevar = function(df, col, limits_for_y = NULL, title){
   #dev.off()
 }
 
-plot_beanplot_2vars = function(df, metric_col, side_col, group_col, limits_for_y = NULL, title){
+plot_beanplot_2vars = function(df, metric_col, side_col, group_col,
+                               total_avg_line = TRUE, beans = TRUE,
+                               bean_avg = TRUE, bean_lines = TRUE,
+                               limits_for_y = NULL, cutmin = -Inf, 
+                               xlab = NULL, ylab = NULL,
+                               cutmax = Inf, title = NULL){
   
   metric_vector <- df[[metric_col]]
   side_vector <- df[[side_col]]
@@ -518,13 +568,13 @@ plot_beanplot_2vars = function(df, metric_col, side_col, group_col, limits_for_y
   bordercolors = c(leftbordercolor,rightbordercolor)
   
   beanplot(metric_vector ~ side_vector * group_vector, data = df, method = "overplot",
-           what = c(TRUE, TRUE, TRUE, TRUE), beanlinewd = 2,
+           what = c(total_avg_line, beans, bean_avg, bean_lines), beanlinewd = 2,
            overallline = "median", beanlines = "mean",
-           col = colors, log = "",  
+           col = colors, log = "", cutmin = cutmin, cutmax = cutmax,
            bw="nrd0", ylim=limits_for_y, main = title, 
-           side = "both", border = bordercolors)
+           side = "both", border = bordercolors, xlab = xlab, ylab = ylab)
   
-  minor.tick(ny = 4)
+  #minor.tick(ny = 4)
   
   #png(filename=paste(title,".png"),width = 1920, height = 1080)
   #dev.off()
