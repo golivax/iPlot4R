@@ -444,7 +444,7 @@ plot_boxplot_1var = function(df, col, transformation = "identity",
 }
 
 plot_boxplot_2vars = function(df, xcol, ycol, groupcol = NULL, limits_for_x = NULL, 
-                              xlab = xcol, ylab = ycol, grouplab = groupcol, xticklab = NULL,
+                              xlab = NULL, ylab = NULL, grouplab = groupcol, xticklab = NULL,
                               breaks_for_y = waiver(), limits_for_y = NULL, trans_for_y = "identity",
                               title = NULL, outfile = NULL, fontsize = 22){
   
