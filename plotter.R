@@ -253,7 +253,8 @@ plot_line_3vars = function(df, xcol, ycol, zcol, limits_for_y = NULL, title){
   #plot(df[,xcol], df[,ycol], type='b', main = title)
 }
 
-
+#Plots a frequency histogram. The function calculates the frequencies based
+#on the raw observations from datacol
 plot_histogram =  function(df, datacol, breaks_for_x = NULL, trim = TRUE,
                          xlab = NULL, ylab = NULL, type = "frequency",
                          space_between_bars = 0.1,
@@ -265,10 +266,9 @@ plot_histogram =  function(df, datacol, breaks_for_x = NULL, trim = TRUE,
   n = nrow(df)
   data <- df[[datacol]]
   
-  #Building the dataset
+  #Building the frequency dataset
   df = data.table(table(data))
   setnames(df,c("data","N"),c("label","value"))
-  #df$label = as.integer(df$label)
   
   if(type == "frequency"){
     if(is.null(ylab)) ylab = "Frequency"
@@ -288,13 +288,14 @@ plot_histogram =  function(df, datacol, breaks_for_x = NULL, trim = TRUE,
   }
   
   if(trim == TRUE & !is.null(limits_for_x)){
-    
     shown_labels = seq(limits_for_x[1],limits_for_x[2],1)
     df = df[label %in% shown_labels]
   }
   
   p <- ggplot(df, aes(x=label,y=value))
-  p <- p + geom_col(colour="black", fill="white", width = 1 - space_between_bars)
+  
+  p <- p + geom_col(
+    colour="black", fill="white", width = 1 - space_between_bars)
   
   if(!is.null(breaks_for_x)){
     p <- p + scale_x_continuous(breaks=breaks_for_x)
@@ -310,22 +311,96 @@ plot_histogram =  function(df, datacol, breaks_for_x = NULL, trim = TRUE,
   
   p <- p + scale_y_continuous(breaks=breaks_for_y)
   
-  
   p <- p + ggtitle(title)
   p <- p + xlab(xlab) + ylab(ylab)
-  
   p <- p + theme_bw(base_size = fontsize) 
   
   print_plot(p,outfile)
 }
 
-plot_histogram_categorical = function(df, col, binwidth = NULL, breaks_for_y = waiver(), 
-                                      limits_for_y = NULL, title = NULL, outfile = NULL){
+#UNTESTED
+#Plot whatever value is passed to it without performing any computation
+plot_barchart = function(df, xcol, ycol, groupcol = NULL, 
+                         legend_title = groupcol,
+                         flip = FALSE, showvalues = TRUE,
+                         breaks_for_x = NULL,
+                         trim = TRUE, xlab = NULL, ylab = NULL, 
+                         space_between_bars = 0.1,
+                         xticklab = NULL,
+                         limits_for_x = NULL, breaks_for_y = waiver(), 
+                         limits_for_y = NULL, title = NULL, outfile = NULL,
+                         fontsize = 22){
   
-  data <- df[[col]]
+  categories <- df[[xcol]]
+  values <- df[[ycol]]
   
-  p <- ggplot(df, aes(x=data), environment = environment()) 
-  p <- p + geom_bar(binwidth=binwidth, colour="black", fill="white")
+  groups <- NULL
+  if(!is.null(groupcol)){
+    groups <- df[[groupcol]]
+  }
+  
+  p <- ggplot(df, aes(x=categories,y=values,fill = groups,label=values), 
+              environment = environment()) 
+  
+  p <- p + geom_col(
+    colour="black", width = 1 - space_between_bars)
+    
+  if(showvalues == TRUE){
+    p <- p + geom_text(size = 6, position = position_stack(vjust = 0.5))
+  }
+  
+  if(!is.null(breaks_for_x)){
+    p <- p + scale_x_continuous(breaks=breaks_for_x)
+    p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
+  }
+  else{
+    p <- p + coord_cartesian(ylim = limits_for_y)
+  }
+  
+  if(!is.null(xticklab)){
+    p <- p + scale_x_discrete(labels=xticklab)
+  }
+  
+  p <- p + scale_y_continuous(breaks=breaks_for_y)
+  
+  p <- p + ggtitle(title)
+  p <- p + xlab(xlab) + ylab(ylab)
+  p <- p + theme_bw(base_size = fontsize) 
+  
+  if(flip == TRUE){
+    p <- p + coord_flip()
+    p <- p + theme(legend.position = "top")
+  }
+  
+  if(!is.null(groupcol)){
+    p <- p + guides(fill=guide_legend(title=legend_title))
+  }
+  
+  print_plot(p,outfile)
+}
+  
+  
+
+#Plots the frequency (count) of every category in datacol 
+#(e.g., datacol = c("A","A","A","B","C")). If a group col is provided, then
+#a stacked bars are produced
+plot_freqhistogram_categorical = function(df, categorycol, groupcol = NULL,
+                                          binwidth = NULL, 
+                                          breaks_for_y = waiver(), 
+                                          limits_for_y = NULL, title = NULL, 
+                                          outfile = NULL){
+  
+  data <- df[[categorycol]]
+ 
+  if(is.null(groupcol)){
+    p <- ggplot(df, aes(x=data), environment = environment()) 
+  }
+  else{
+    groups <- df[[groupcol]]
+    p <- ggplot(df, aes(x=data, fill = groups), environment = environment()) 
+  }
+  
+  p <- p + geom_bar(binwidth=binwidth, colour="black")
   p <- p + scale_y_continuous(breaks=breaks_for_y, limits=limits_for_y)
   p <- p + ggtitle(title)
   p <- p + theme_bw() 
@@ -333,6 +408,7 @@ plot_histogram_categorical = function(df, col, binwidth = NULL, breaks_for_y = w
   print_plot(p,title)
   
 }
+
 
 plot_boxplot_1var = function(df, col, transformation = "identity", 
                              xticklab = NULL, xlab = NULL, ylab = NULL,
