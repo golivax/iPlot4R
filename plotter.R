@@ -471,8 +471,8 @@ plot_boxplot_2vars = function(
 plot_violin = function(
   df, xcol = NULL, ycol, groupcol = NULL, xlab = xcol, ylab = ycol, grouplab = groupcol, xticklab = NULL, trim = TRUE, 
   split = FALSE, limits_for_y = NULL, breaks_for_y = waiver(), showboxplot = FALSE, boxplot_width = 0.1, 
-  dodge_width = 0.9, scale = "area", transformation = "identity", legend_title = groupcol, legend_labels = waiver(), 
-  outfile = NULL, title = NULL, fontsize = 22){
+  dodge_width = 0.9, scale = "area", transformation = "identity", show_legend = TRUE, legend_title = groupcol, 
+  legend_labels = waiver(), outfile = NULL, title = NULL, fontsize = 22){
   
   #Sets the dodge (space between plots from the same group)
   dodge <- position_dodge(width = dodge_width)
@@ -481,7 +481,7 @@ plot_violin = function(
   data <- df[[ycol]]
   
   if(is.null(xcol)){
-    aesthetics <- aes(x = "", y=data)
+    aesthetics <- aes(x = "", y = data)
   }
   else{
     vars <- df[[xcol]]
@@ -490,16 +490,16 @@ plot_violin = function(
     }
    
     if(is.null(groupcol)){
-      aesthetics <- aes(x=vars,y=data)
+      aesthetics <- aes(x = vars, y = data)
     }
     else{
       groups <- df[[groupcol]]
-      aesthetics <- aes(x=vars,y=data, fill=groups)
+      aesthetics <- aes(x = vars, y = data, fill = groups)
     }
   }
   
   #Creates the empty plot
-  p <- ggplot(data = df, aesthetics) 
+  p <- ggplot(data = df, aesthetics)
   
   #Adds the violin plot
   if(split == FALSE){
@@ -515,8 +515,15 @@ plot_violin = function(
     }
   }
   else{
-    p <- p + geom_split_violin(scale = scale)
-    p <- p + stat_summary(fun.data="plot.median", geom="errorbar", colour="black", width=0.90, size=1, position = dodge)
+    p <- p + geom_split_violin(groupcol, scale = scale)
+    
+    if(is.null(groupcol)){
+      p <- p + stat_summary(fun.y=median, geom="point", shape=23, size=3, fill = "black", position = dodge)
+    }
+    else{
+      p <- p + stat_summary(fun.data="plot.median", geom="errorbar", colour="black", width=0.90, size=1, position = dodge)  
+    }
+    
   }
   
   p <- p + coord_cartesian(ylim = limits_for_y)
@@ -527,6 +534,10 @@ plot_violin = function(
   
   if(!is.null(groupcol)){
     p <- p + scale_fill_grey(name=legend_title, start = 0.65, end = 1.0, labels = legend_labels)
+  }
+  
+  if(show_legend == FALSE){
+    p <- p + guides(fill=FALSE)
   }
   
   # y-scale is assumed to be continuous
@@ -542,6 +553,7 @@ plot_violin = function(
   p <- p + theme_bw(base_size = fontsize) 
   
   print_plot(p,outfile)
+  return(p)
 }
 
 ## custom median function to be used by split violins
@@ -550,30 +562,49 @@ plot.median <- function(x) {
   c(y = m, ymin = m, ymax = m)
 }
 
-GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin, draw_group = function(self, data, ..., draw_quantiles = NULL){
-  
-  data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
-  grp <- data[1,'group']
-  newdata <- plyr::arrange(transform(data, x = if(grp%%2==1) xminv else xmaxv), if(grp%%2==1) y else -y)
-  newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
-  newdata[c(1,nrow(newdata)-1,nrow(newdata)), 'x'] <- round(newdata[1, 'x']) 
-  if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
-    stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <= 1))
-    quantiles <- create_quantile_segment_frame(data, draw_quantiles)
-    aesthetics <- data[rep(1, nrow(quantiles)), setdiff(names(data), c("x", "y")), drop = FALSE]
-    aesthetics$alpha <- rep(1, nrow(quantiles))
-    both <- cbind(quantiles, aesthetics)
-    quantile_grob <- GeomPath$draw_panel(both, ...)
-    ggplot2:::ggname("geom_split_violin", grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
-  }
-  else {
-    ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
-  }
-})
-
 geom_split_violin <- function (
-  mapping = NULL, data = NULL, stat = "ydensity", position = "identity", ..., draw_quantiles = NULL, trim = TRUE, 
+  groupcol, mapping = NULL, data = NULL, stat = "ydensity", position = "identity", ..., draw_quantiles = NULL, trim = TRUE, 
   scale = "area", na.rm = FALSE, show.legend = NA, inherit.aes = TRUE) {
+  
+  GeomSplitViolin <- ggproto(
+    "GeomSplitViolin",
+    GeomViolin, 
+    
+    groupcol = NULL,
+    
+    set_groupcol = function(self, newgroupcol){
+      self$groupcol <- newgroupcol
+    },
+    
+    draw_group = function(self, data, ..., draw_quantiles = NULL){
+      
+      data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
+      
+      #This 'if' overrides grp to enable 'one half' violin plots when groupcol does not exist
+      grp <- data[1,'group']  
+      if(is.null(self$groupcol)){
+        grp <- 1
+      }
+      
+      newdata <- plyr::arrange(transform(data, x = if(grp%%2==1) xminv else xmaxv), if(grp%%2==1) y else -y)
+      newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
+      newdata[c(1,nrow(newdata)-1,nrow(newdata)), 'x'] <- round(newdata[1, 'x']) 
+      if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
+        stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <= 1))
+        quantiles <- create_quantile_segment_frame(data, draw_quantiles)
+        aesthetics <- data[rep(1, nrow(quantiles)), setdiff(names(data), c("x", "y")), drop = FALSE]
+        aesthetics$alpha <- rep(1, nrow(quantiles))
+        both <- cbind(quantiles, aesthetics)
+        quantile_grob <- GeomPath$draw_panel(both, ...)
+        ggplot2:::ggname("geom_split_violin", grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
+      }
+      else {
+        ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
+      }
+    }
+  ) 
+  
+  GeomSplitViolin$set_groupcol(groupcol)
   
   layer(data = data, mapping = mapping, stat = stat, geom = GeomSplitViolin, position = position, 
         show.legend = show.legend, inherit.aes = inherit.aes, 
