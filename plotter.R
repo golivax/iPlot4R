@@ -1,3 +1,4 @@
+library(ggrepel)
 library(beanplot)
 library(ggplot2)
 library(Hmisc)
@@ -174,32 +175,65 @@ plot_hexbin = function(
 }
 
 plot_point = function(
-  df, xcol, ycol, varcol, lineColours = NULL, xlab, breaks_for_x = waiver(), limits_for_x = NULL, ylab, 
-  breaks_for_y = waiver(), limits_for_y = NULL, title = NULL, fontsize = 22, outfile = NULL){
+  df, xcol, ycol, varcol, xlab, ylab, use_colors = TRUE, use_shapes = FALSE, 
+  breaks_for_x = waiver(), limits_for_x = NULL, minor_breaks_for_x = waiver(),  
+  breaks_for_y = waiver(), limits_for_y = NULL, minor_breaks_for_y = waiver(),
+  include_labels = FALSE, title = NULL, fontsize = 22, outfile = NULL){
   
-  x <- df[[xcol]]
-  y <- df[[ycol]]
-  colour <- df[[varcol]]
   
-  p <- ggplot(data = df, aes(x = x, y = y, colour = colour), environment = environment())
+  #Prepares aesthetics
+  if(is.null(xcol)){
+    aesthetics <- aes_string(x = as.factor(""), y = ycol)
+  }
+  else{
+    if(is.null(varcol)){
+      aesthetics <- aes_string(x = xcol, y = ycol)
+    }
+    else{
+      
+      if(use_colors == TRUE & use_shapes == FALSE){
+        aesthetics <- aes_string(x = xcol, y = ycol, color = varcol)  
+      }
+      if(use_colors == FALSE & use_shapes == TRUE){
+        aesthetics <- aes_string(x = xcol, y = ycol, shapes = varcol)
+      }
+      if(use_colors == TRUE & use_shapes == TRUE){
+        aesthetics <- aes_string(x = xcol, y = ycol, color = varcol, shapes = varcol)
+      }
+      
+    }
+  }
+  
+  p <- ggplot(df, aesthetics, environment = environment()) 
   
   p <- p + xlab(xlab) + ylab(ylab)
   p <- p + guides(colour = FALSE)
   
-  if(!is.null(lineColours)){
-    p <- p + scale_color_manual(values = lineColours)  
-  }
-  
   #p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
   
-  p <- p + scale_x_continuous(breaks=breaks_for_x)
-  p <- p + scale_y_continuous(breaks=breaks_for_y)
+  if(is.factor(df[[xcol]])){
+    p <- p + scale_x_discrete()
+    
+    num_levels = length(levels(df[[xcol]]))
+    reps = ceiling(num_levels/8)
+    p <- p + scale_color_manual(values = rep(brewer.pal(n = 8, "Dark2"),reps))
+  }
+  else{
+    p <- p + scale_x_continuous(breaks=breaks_for_x, minor_breaks = minor_breaks_for_x)  
+  }
+  
+  if(include_labels == TRUE & !is.null(varcol)){
+    p <- p + geom_text_repel(aes_string(label = varcol), size = 4.0) 
+  }
+  
+  p <- p + scale_y_continuous(breaks=breaks_for_y, minor_breaks = minor_breaks_for_y)
+  
   p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
   
-  p <- p + geom_point()
-  
+  p <- p + geom_point(size = 3)
   p <- p + ggtitle(title)
   p <- p + theme_bw(base_size = fontsize)
+  p <- p + theme(plot.title = element_text(hjust = 0.5))
   
   print_plot(p,outfile)
   return(p)
@@ -317,22 +351,23 @@ plot_histogram =  function(
   print_plot(p,outfile)
 }
 
-#UNTESTED
 #Plot whatever value is passed to it without performing any computation
 plot_barchart = function(
-  df, xcol, ycol, groupcol = NULL, legend_title = groupcol, flip = FALSE, showvalues = TRUE, breaks_for_x = NULL, 
+  df, xcol, ycol, groupcol = NULL, flip = FALSE, showvalues = TRUE, breaks_for_x = NULL, 
   trim = TRUE, xlab = NULL, ylab = NULL, space_between_bars = 0.1, xticklab = NULL, limits_for_x = NULL, 
-  breaks_for_y = waiver(), limits_for_y = NULL, title = NULL, outfile = NULL, fontsize = 22){
+  breaks_for_y = waiver(), limits_for_y = NULL, title = NULL, show_legend = TRUE, legend_title = groupcol, 
+  legend_labels = waiver(), outfile = NULL, fontsize = 22){
   
   categories <- df[[xcol]]
   values <- df[[ycol]]
   
   groups <- NULL
   if(!is.null(groupcol)){
-    groups <- df[[groupcol]]
+    groups <- as.factor(df[[groupcol]])
+    groups <- factor(groups, levels=rev(levels(groups)))
   }
   
-  p <- ggplot(df, aes(x=categories,y=values,fill = groups,label=values), environment = environment()) 
+  p <- ggplot(df, aes(x=categories, y=values, fill = groups, label=values), environment = environment()) 
   p <- p + geom_col(colour="black", width = 1 - space_between_bars)
     
   if(showvalues == TRUE){
@@ -348,6 +383,9 @@ plot_barchart = function(
   }
   
   if(!is.null(xticklab)){
+    if(!is.null(groupcol)){
+      xticklab <- rev(xticklab)  
+    }
     p <- p + scale_x_discrete(labels=xticklab)
   }
   
@@ -359,13 +397,20 @@ plot_barchart = function(
   
   if(flip == TRUE){
     p <- p + coord_flip()
-    p <- p + theme(legend.position = "top")
   }
   
   if(!is.null(groupcol)){
-    p <- p + guides(fill=guide_legend(title=legend_title))
+    
+    if(show_legend == TRUE){
+      p <- p + scale_fill_discrete(labels = rev(legend_labels), l = 85, c = 40)
+      p <- p + theme(legend.position = "top")
+      p <- p + guides(fill = guide_legend(title = legend_title, reverse = TRUE))  
+    }
+    else{
+      p <- p + guides(fill = FALSE)
+    }
   }
-  
+   
   print_plot(p,outfile)
 }
   
@@ -397,70 +442,90 @@ plot_freqhistogram_categorical = function(
   
 }
 
-
-plot_boxplot_1var = function(
-  df, col, transformation = "identity", xticklab = NULL, xlab = NULL, ylab = NULL, breaks_for_y = waiver(), 
-  limits_for_y = NULL, title = NULL, outfile = NULL){
+plot_boxplot = function(
+  df, xcol = NULL, ycol, groupcol = NULL, xlab = NULL, ylab = NULL, grouplab = groupcol, 
+  xticklab = NULL, breaks_for_y = waiver(), limits_for_y = NULL, trans_for_y = "identity", flip = FALSE, 
+  show_legend = TRUE, legend_title = groupcol, legend_labels = waiver(), 
+  title = NULL, outfile = NULL, fontsize = 22, colored_groups = FALSE, 
+  groups_as_facets = FALSE){
   
-  data <- df[[col]]
-  
-  p <- ggplot(df, aes(x=factor(col, levels = unique(col)),y=data), environment = environment()) 
-  p <- p + geom_boxplot()
-  
-  p <- p + scale_y_continuous(breaks=breaks_for_y, trans = transformation)
-  
-  if(!is.null(xticklab)){
-    p <- p + scale_x_discrete(labels=xticklab)
-  }
-  
-  if(!is.null(xlab)){
-    p <- p + xlab(xlab)  
-  }
-  
-  if(!is.null(ylab)){
-    p <- p + ylab(ylab)  
-  }
-  
-  p <- p + coord_cartesian(ylim = limits_for_y)
-  p <- p + ggtitle(title)
-  p <- p + xlab(NULL)
-  p <- p + theme_bw() 
-  
-  print_plot(p,outfile)
-
-}
-
-plot_boxplot_2vars = function(
-  df, xcol, ycol, groupcol = NULL, limits_for_x = NULL, xlab = NULL, ylab = NULL, grouplab = groupcol, xticklab = NULL,
-  breaks_for_y = waiver(), limits_for_y = NULL, trans_for_y = "identity", title = NULL, outfile = NULL, fontsize = 22){
-  
-  vars <- df[[xcol]]
-  data <- df[[ycol]]
-  
-  if(is.null(groupcol)){
-    aesthetics = aes(x=factor(vars, levels = unique(vars)),y=data)
+  #Prepares aesthetics
+  if(is.null(xcol)){
+    aesthetics <- aes_string(x = as.factor(""), y = ycol)
   }
   else{
-    groups <- df[[groupcol]]
-    aesthetics = aes(x=factor(vars, levels = unique(vars)),y=data, fill=groups)
+    if(is.null(groupcol) | groups_as_facets == TRUE){
+      aesthetics <- aes_string(x = xcol, y = ycol)
+    }
+    else{
+      aesthetics <- aes_string(x = xcol, y = ycol, fill = groupcol)  
+    }
+  }
+  
+  #If xcol is given, then it should map to a factor column
+  if(!is.null(xcol)){
+    if(!is.factor(df[[xcol]])){
+      #Labels are given in the order they appear in the data (because of 'unique')
+      df[[xcol]] <- factor(df[[xcol]], levels = unique(df[[xcol]]))
+    }
+  }
+  
+  #Same thing for groupcol
+  if(!is.null(groupcol)){
+    if(!is.factor(df[[groupcol]])){
+      df[[groupcol]] <- factor(df[[groupcol]], levels = unique(df[[groupcol]]))
+    }
   }
   
   p <- ggplot(df, aesthetics, environment = environment()) 
   p <- p + geom_boxplot()
   
+  #Y scale
   p <- p + scale_y_continuous(breaks=breaks_for_y, trans = trans_for_y)
   
+  #X scale
   if(!is.null(xticklab)){
     p <- p + scale_x_discrete(labels=xticklab)
   }
   
+  #Deals with groups
   if(!is.null(groupcol)){
-    p <- p + scale_fill_grey(name=grouplab, start = 0.5, end = 1)
+    
+    #Fill choice
+    if(colored_groups == TRUE){
+      p <- p + scale_fill_hue(name=legend_title, labels = legend_labels, l = 85, c = 40)
+    }
+    else{
+      p <- p + scale_fill_grey(name=legend_title, labels = legend_labels, start = 0.65, end = 1.0)  
+    }
+    
+    #Show legend
+    if(show_legend == FALSE){
+      p <- p + guides(fill=FALSE)
+    }
+    
+    #Facets choice
+    if(groups_as_facets == TRUE){
+      p = p + facet_grid(reformulate(groupcol))
+    }
+    
   }
   
-  p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
-  p <- p + ggtitle(title)
+  #Limits for the axis
+  p <- p + coord_cartesian(ylim = limits_for_y)
+  
+  #Should flip?
+  if(flip == TRUE){
+    p <- p + coord_flip()
+  }
+  
+  #Axis labels
   p <- p + xlab(xlab) + ylab(ylab)
+  
+  #Title
+  p <- p + ggtitle(title)
+  
+  #Theme Black/White
   p <- p + theme_bw(base_size = fontsize) 
   
   print_plot(p,outfile)
@@ -970,6 +1035,7 @@ plot_scatterplot = function(df, xcol, ycol, limits_for_x = NULL, limits_for_y = 
 
 #Beta function
 getBreaksForNumTicks = function(data, numticks, round_to = NULL){
+  min_value <- min(data)
   max_value <- max(data)
   if(is.null(round_to)){
     each_tick <- max_value/numticks 
@@ -978,7 +1044,7 @@ getBreaksForNumTicks = function(data, numticks, round_to = NULL){
     each_tick <- round_any(max_value/numticks, round_to)  
   }
   max_tick <- ceiling(max_value/each_tick) * each_tick
-  breaks <- seq(0,max_tick,each_tick)
+  breaks <- seq(min_value,max_tick,each_tick)
   return(breaks)
 }
 
