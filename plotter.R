@@ -1,76 +1,10 @@
 library(ggrepel)
-library(beanplot)
 library(ggplot2)
 library(Hmisc)
 library(hexbin)
 library(grid)
 
-plot_control_chart = function(df, index_col, metric_col, limits_for_y = NULL, title = NULL, outfile = NULL){
-  
-  x <- df[[index_col]]
-  y <- df[[metric_col]]
-  
-  metric_mean <- mean(y)
-  three_std_below <- metric_mean - (3 * sd(y))
-  three_std_above <- metric_mean + (3 * sd(y))
-  
-  vert_lines <-  numeric()
-  outliers <- numeric()
-  cutpoints <- unique(df$cutpoint)
-  
-  for(i in 1:length(cutpoints)){
-    chunk <- subset(df, cutpoint == i)
-    vert_lines[i] <- head(chunk,1)$commit_seq
-    outliers_below <- which(chunk[,metric_col] < three_std_below)
-    outliers_above <- which(chunk[,metric_col] > three_std_above)
-    outliers[i] <- length(outliers_below) + length(outliers_above)
-  }
-  
-  print(paste("Three std. below:",three_std_below))
-  print(paste("Three std. above:",three_std_above))
-  cat(outliers, sep = "\n")
-  
-  p <- ggplot(df, aes(x,y),environment = environment())
-  p <- p + scale_y_continuous()
-
-  p <- p + coord_cartesian(ylim = limits_for_y)
-
-  p <- p + geom_point()
-
-  p <- p + geom_hline(yintercept=metric_mean, linetype = "longdash", colour = "blue")
-  p <- p + geom_hline(yintercept=three_std_below, linetype = "longdash", colour = "blue")
-  p <- p + geom_hline(yintercept=three_std_above, linetype = "longdash", colour = "blue")
-  
-  p <- p + geom_vline(xintercept = vert_lines, linetype = "longdash", colour = "red")
-  
-  p <- p + ggtitle(title)
-  p <- p + theme_bw()
-  
-  print_plot(p,outfile)
-  
-  #plot(df[,xcol], df[,ycol], type='b', main = title)
-}
-
-plot_points_2vars = function(
-  df, xcol, ycol, breaks_for_x = waiver(), limits_for_x = NULL, breaks_for_y = waiver(), limits_for_y = NULL, title){
-  
-  x <- df[[xcol]]
-  y <- df[[ycol]]
-  p <- ggplot(df, aes(x,y),environment = environment())
-  p <- p + scale_x_continuous(breaks=breaks_for_x)
-  p <- p + scale_y_continuous(breaks=breaks_for_y)
-  p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
-  p <- p + geom_point()
-  p <- p + geom_smooth()
-  p <- p + ggtitle(title)
-  p <- p + theme_bw()
-  
-  print_plot(p,title)
-  
-  #plot(df[,xcol], df[,ycol], type='b', main = title)
-}
-
-
+#Old function (somewhat outdated)
 plot_line = function(
   df, xcol, ycol, varcol, lineColours = NULL, xlab, breaks_for_x = waiver(), limits_for_x = NULL, ylab, 
   breaks_for_y = waiver(), limits_for_y = NULL, showpoints = FALSE, smooth = FALSE, title = NULL, fontsize = 22, 
@@ -117,11 +51,7 @@ plot_bubble = function(
   breaks_for_y = waiver(), limits_for_y = NULL, sizelab = sizecol, title = NULL, smooth = FALSE, fontsize = 22, 
   outfile = NULL){
   
-  x <- df[[xcol]]
-  y <- df[[ycol]]
-  size <- df[[sizecol]]
-  
-  p <- ggplot(data = df, aes(x = x, y = y, size = size), environment = environment())
+  p <- ggplot(data = df, aes_string(x = xcol, y = ycol, size = sizecol), environment = environment())
   
   p <- p + xlab(xlab) + ylab(ylab)
   p <- p + labs(size=sizelab)
@@ -149,10 +79,7 @@ plot_hexbin = function(
   df, xcol, ycol, numbins = 30, xlab = NULL, breaks_for_x = waiver(), limits_for_x = NULL, ylab = NULL, 
   breaks_for_y = waiver(), limits_for_y = NULL, title = NULL, fontsize = 22, outfile = NULL){
   
-  x <- df[[xcol]]
-  y <- df[[ycol]]
-  
-  p <- ggplot(data = df, aes(x = x, y = y), environment = environment())
+  p <- ggplot(data = df, aes_string(x = xcol, y = ycol), environment = environment())
   
   p <- p + xlab(xlab) + ylab(ylab)
   #p <- p + guides(colour = FALSE)
@@ -175,10 +102,11 @@ plot_hexbin = function(
 }
 
 plot_point = function(
-  df, xcol, ycol, varcol, xlab, ylab, use_colors = TRUE, use_shapes = FALSE, 
+  df, xcol = NULL, ycol, varcol = NULL, xlab, ylab, use_colors = TRUE, use_shapes = FALSE, 
   breaks_for_x = waiver(), limits_for_x = NULL, minor_breaks_for_x = waiver(),  
   breaks_for_y = waiver(), limits_for_y = NULL, minor_breaks_for_y = waiver(),
-  include_labels = FALSE, title = NULL, fontsize = 22, outfile = NULL){
+  include_labels = FALSE, labelcol = varcol, point_color = "black", flip = FALSE, 
+  title = NULL, fontsize = 22, outfile = NULL){
   
   
   #Prepares aesthetics
@@ -222,64 +150,32 @@ plot_point = function(
     p <- p + scale_x_continuous(breaks=breaks_for_x, minor_breaks = minor_breaks_for_x)  
   }
   
-  if(include_labels == TRUE & !is.null(varcol)){
-    p <- p + geom_text_repel(aes_string(label = varcol), size = 4.0) 
+  if(include_labels == TRUE & !is.null(labelcol)){
+    p <- p + geom_text_repel(aes_string(label = labelcol), size = 4.0) 
   }
   
   p <- p + scale_y_continuous(breaks=breaks_for_y, minor_breaks = minor_breaks_for_y)
   
-  p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
+  p <- p + coord_cartesian(ylim = limits_for_y)
   
-  p <- p + geom_point(size = 3)
+  #Should flip?
+  if(flip == TRUE){
+    p <- p + coord_flip(ylim = limits_for_y)
+  }
+  
+  if(is.null(varcol)){
+    p <- p + geom_point(size = 3, color = point_color)  
+  }
+  else{
+    p <- p + geom_point(size = 3)
+  }
+  
   p <- p + ggtitle(title)
   p <- p + theme_bw(base_size = fontsize)
   p <- p + theme(plot.title = element_text(hjust = 0.5))
   
   print_plot(p,outfile)
   return(p)
-}
-
-
-plot_line_2vars = function(
-  df, xcol, ycol, breaks_for_x = waiver(), limits_for_x = NULL, breaks_for_y = waiver(), limits_for_y = NULL, 
-  smooth = FALSE, title){
-  
-  x <- df[[xcol]]
-  y <- df[[ycol]]
-  
-  p <- ggplot(df, aes(x,y),environment = environment())
-  p <- p + scale_x_continuous(breaks=breaks_for_x)
-  p <- p + scale_y_continuous(breaks=breaks_for_y)
-  p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
-  p <- p + geom_line()
-  
-  if(smooth == TRUE){
-    p <- p + geom_smooth()
-  }
-  
-  p <- p + ggtitle(title)
-  p <- p + theme_bw()
-  
-  print_plot(p,title)
-  
-  #plot(df[,xcol], df[,ycol], type='b', main = title)
-}
-
-plot_line_3vars = function(df, xcol, ycol, zcol, limits_for_y = NULL, title){
-  
-  x <- df[[xcol]]
-  y <- df[[ycol]]
-  z <- df[[zcol]]
-  
-  p <- ggplot(df, aes(factor(x, levels = unique(x)),y,size=z),environment = environment())
-  p <- p + coord_cartesian(ylim = limits_for_y)
-  p <- p + geom_line()
-  p <- p + ggtitle(title)
-  p <- p + theme_bw()
-  
-  print_plot(p,title)
-  
-  #plot(df[,xcol], df[,ycol], type='b', main = title)
 }
 
 #Plots a frequency histogram. The function calculates the frequencies based
@@ -516,7 +412,7 @@ plot_boxplot = function(
   
   #Should flip?
   if(flip == TRUE){
-    p <- p + coord_flip()
+    p <- p + coord_flip(ylim = limits_for_y)
   }
   
   #Axis labels
@@ -531,40 +427,45 @@ plot_boxplot = function(
   print_plot(p,outfile)
 }
 
-#TODO: Create a single function for boxplot (and maybe others?) inspired by this one
-#TODO: Remove the beanplot functions
 plot_violin = function(
-  df, xcol = NULL, ycol, groupcol = NULL, xlab = xcol, ylab = ycol, grouplab = groupcol, xticklab = NULL, trim = TRUE, 
-  split = FALSE, limits_for_y = NULL, breaks_for_y = waiver(), showboxplot = FALSE, boxplot_width = 0.1, 
-  dodge_width = 0.9, scale = "area", transformation = "identity", show_legend = TRUE, legend_title = groupcol, 
-  legend_labels = waiver(), outfile = NULL, title = NULL, fontsize = 22){
+  df, xcol = NULL, ycol, groupcol = NULL, facetcol = NULL, xlab = xcol, ylab = ycol, grouplab = groupcol, 
+  colored_groups = FALSE, xticklab = NULL, trim = TRUE,  split = FALSE, limits_for_y = NULL, breaks_for_y = waiver(), 
+  showboxplot = FALSE, boxplot_width = 0.1, dodge_width = 0.9, scale = "area", transformation = "identity", 
+  show_legend = TRUE, legend_title = groupcol, legend_labels = waiver(), legend_position = "right",
+  outfile = NULL, title = NULL, fontsize = 22){
   
   #Sets the dodge (space between plots from the same group)
   dodge <- position_dodge(width = dodge_width)
   
-  #Prepares the data
-  data <- df[[ycol]]
-  
+  #Prepares aesthetics
   if(is.null(xcol)){
-    aesthetics <- aes(x = "", y = data)
+    aesthetics <- aes_string(x = as.factor(""), y = ycol)
   }
   else{
-    vars <- df[[xcol]]
-    if(!is.factor(vars)){
-      vars <- factor(vars, levels = unique(vars))
-    }
-   
     if(is.null(groupcol)){
-      aesthetics <- aes(x = vars, y = data)
+      aesthetics <- aes_string(x = xcol, y = ycol)
     }
     else{
-      groups <- df[[groupcol]]
-      aesthetics <- aes(x = vars, y = data, fill = groups)
+      aesthetics <- aes_string(x = xcol, y = ycol, fill = groupcol)  
     }
   }
   
-  #Creates the empty plot
-  p <- ggplot(data = df, aesthetics)
+  #If xcol is given, then it should map to a factor column
+  if(!is.null(xcol)){
+    if(!is.factor(df[[xcol]])){
+      #Labels are given in the order they appear in the data (because of 'unique')
+      df[[xcol]] <- factor(df[[xcol]], levels = unique(df[[xcol]]))
+    }
+  }
+  
+  #Same thing for groupcol
+  if(!is.null(groupcol)){
+    if(!is.factor(df[[groupcol]])){
+      df[[groupcol]] <- factor(df[[groupcol]], levels = unique(df[[groupcol]]))
+    }
+  }
+  
+  p <- ggplot(df, aesthetics, environment = environment())
   
   #Adds the violin plot
   if(split == FALSE){
@@ -580,29 +481,48 @@ plot_violin = function(
     }
   }
   else{
-    p <- p + geom_split_violin(groupcol, scale = scale)
+    #Split violin requires aesthetics to be in this order: "x,y,fill", so we make
+    #sure aesthetics are given in this order to it
+    geom_split_aes = aesthetics["x","y","fill"]
+    p <- p + geom_split_violin(groupcol, mapping = geom_split_aes, scale = scale)
     
     if(is.null(groupcol)){
       p <- p + stat_summary(fun.y=median, geom="point", shape=23, size=3, fill = "black", position = dodge)
     }
     else{
-      p <- p + stat_summary(fun.data="plot.median", geom="errorbar", colour="black", width=0.90, size=1, position = dodge)  
+      p <- p + stat_summary(
+        fun.data="plot.median", geom="errorbar", colour="black", width=0.90, size=1, position = dodge)  
     }
     
+  }
+  
+  #Deals with groups
+  if(!is.null(groupcol)){
+    
+    #Fill choice
+    if(colored_groups == TRUE){
+      p <- p + scale_fill_hue(name=legend_title, labels = legend_labels, l = 85, c = 40)
+    }
+    else{
+      p <- p + scale_fill_grey(name=legend_title, labels = legend_labels, start = 0.65, end = 1.0)  
+    }
+    
+    #Show legend
+    if(show_legend == FALSE){
+      p <- p + guides(fill=FALSE)
+    }
+    
+  }
+  
+  #Facets choice
+  if(!is.null(facetcol)){
+    p = p + facet_grid(reformulate(facetcol))
   }
   
   p <- p + coord_cartesian(ylim = limits_for_y)
   
   if(!is.null(xticklab)){
     p <- p + scale_x_discrete(labels=xticklab)
-  }
-  
-  if(!is.null(groupcol)){
-    p <- p + scale_fill_grey(name=legend_title, start = 0.65, end = 1.0, labels = legend_labels)
-  }
-  
-  if(show_legend == FALSE){
-    p <- p + guides(fill=FALSE)
   }
   
   # y-scale is assumed to be continuous
@@ -616,6 +536,7 @@ plot_violin = function(
   
   # black and white theme
   p <- p + theme_bw(base_size = fontsize) 
+  p <- p + theme(legend.position = legend_position, legend.box = "horizontal")
   
   print_plot(p,outfile)
   return(p)
@@ -644,9 +565,15 @@ geom_split_violin <- function (
     draw_group = function(self, data, ..., draw_quantiles = NULL){
       
       data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
-      
-      #This 'if' overrides grp to enable 'one half' violin plots when groupcol does not exist
       grp <- data[1,'group']  
+      
+      #Debug
+      #View(data)
+      #print(paste("group",grp))
+      #print(paste("x",data[1,'x']))
+      #print(paste("fill",data[1,'fill']))
+ 
+      #This 'if' overrides grp to enable 'one half' violin plots when groupcol does not exist
       if(is.null(self$groupcol)){
         grp <- 1
       }
@@ -676,364 +603,7 @@ geom_split_violin <- function (
         params = list(trim = trim, scale = scale, draw_quantiles = draw_quantiles, na.rm = na.rm, ...))
 }
 
-plot_beanplot = function(df, xcol, ycol, limits_for_y = NULL, title = NULL, outfile = NULL){
-  
-  yvector <- df[[ycol]]
-  xvector <- df[[xcol]]
-  
-  if(!is.null(outfile)){
-    png(filename=paste("./results/imgs/",outfile,".png",sep = ""),width = 480, height = 480)
-  }
-  
-  beanplot(
-    yvector ~ xvector, data = df, method = "overplot", what = c(TRUE, TRUE, TRUE, FALSE), beanlinewd = 2, 
-    overallline = "median", beanlines = "median", col = c("lightgray","black","black","black"), border = "gray", 
-    log = "",  bw="nrd0", ylim=limits_for_y, main = title)
-  
-  minor.tick(ny = 5)
-  
-  if(!is.null(outfile)){
-    dev.off()
-  }
-  
-  #png(filename=paste(title,".png"),width = 1920, height = 1080)
-  #dev.off()
-}
-
-plot_beanplot_singlevar = function(df, col, limits_for_y = NULL, title){
-  
-  numvector <- df[[col]]
-  
-  beanplot(
-    numvector, method = "overplot", what = c(TRUE, TRUE, TRUE, FALSE), beanlinewd = 2, overallline = "median", 
-    beanlines = "median", col = c("lightgray","black","black","blue"), border = "gray", log = "", bw="nrd0", 
-    ylim=limits_for_y, main = title)
-  
-  minor.tick(ny = 4)
-  
-  #png(filename=paste(title,".png"),width = 1920, height = 1080)
-  #dev.off()
-}
-
-plot_beanplot_2vars = function(
-  df, metric_col, side_col, group_col, total_avg_line = TRUE, beans = TRUE, bean_avg = TRUE, bean_lines = TRUE, 
-  limits_for_y = NULL, cutmin = -Inf, xlab = NULL, ylab = NULL, cutmax = Inf, title = NULL){
-  
-  metric_vector <- df[[metric_col]]
-  side_vector <- df[[side_col]]
-  group_vector <- df[[group_col]]
-  
-  colorsleft <- c("lightgray","black","black","blue")
-  colorsright <- c("darkgray","black","black","blue")
-  colors <- list(colorsleft,colorsright)
-  
-  leftbordercolor <- "lightgray"
-  rightbordercolor <- "darkgray"
-  bordercolors <- c(leftbordercolor,rightbordercolor)
-  
-  beanplot(
-    metric_vector ~ side_vector * group_vector, data = df, method = "overplot", 
-    what = c(total_avg_line, beans, bean_avg, bean_lines), beanlinewd = 2, overallline = "median", beanlines = "mean",
-    col = colors, log = "", cutmin = cutmin, cutmax = cutmax, bw="nrd0", ylim=limits_for_y, main = title, side = "both", 
-    border = bordercolors, xlab = xlab, ylab = ylab)
-  
-  #minor.tick(ny = 4)
-  
-  #png(filename=paste(title,".png"),width = 1920, height = 1080)
-  #dev.off()
-}
-
-
-plot_beanplot_2vars_withoutgroup = function(
-  df, metric_col, side_col, xlab = "", ylab = "", leftside = NULL, rightside = NULL, limits_for_y = NULL, cutmin = -Inf, 
-  cutmax = Inf, legendposition = "topright", title = NULL, outfile = NULL){
-  
-  metric_vector <- df[[metric_col]]
-  side_vector <- df[[side_col]]
-  
-  colorsleft <- c("lightgray","black","black","black")
-  colorsright <- c("darkgray","black","black","black")
-  colors <- list(colorsleft,colorsright)
-  
-  leftbordercolor <- "black"
-  rightbordercolor <- "black"
-  bordercolors <- c(leftbordercolor,rightbordercolor)
-  
-  if(!is.null(outfile)){
-    png(filename=outfile,width = 1600, height = 900)
-  }
-  
-  beanplot(
-    metric_vector ~ side_vector, data = df, method = "overplot", what = c(TRUE, TRUE, TRUE, FALSE), beanlinewd = 2,
-    overallline = "median", beanlines = "median", col = colors, log = "", cutmin = cutmin, cutmax = cutmax, bw="nrd0", 
-    ylim=limits_for_y, main = title, side = "both", border = bordercolors, xlab = xlab, ylab = ylab, show.names = FALSE, 
-    cex.axis=1.25, cex.main=1.5, cex.lab=1.5)
-  
-  if(!is.null(leftside) || !is.null(rightside)){
-    legend(legendposition, bty="n", c(leftside, rightside), fill = c("lightgray", "darkgray"), cex = 1.5)  
-  }
-  
-  if(!is.null(outfile)){
-    dev.off()
-  }
-  
-}
-
-plot_lowess = function(
-  df, xcol, ycol, limits_for_y = NULL, breaks_for_y = waiver(), show_hexbin = TRUE, spanvalue = 2/3, iter = 3, 
-  title = NULL, outfile = NULL){
-   
-  xvector <- df[[xcol]]
-  yvector <- df[[ycol]]
-  
-  #### Calculates LOWESS curve ######
-  
-  #Function as.numeric is applied to x and y components to make sure lowess
-  #can be calculated.
-  curve <- lowess(as.numeric(xvector), y = as.numeric(yvector), f = spanvalue, iter = iter)
-  
-  #first point and last point of curve
-  
-  x0 = round(head(curve$x, n=1), digits = 2)
-  y0 = round(head(curve$y, n=1), digits = 2)
-  xn = round(tail(curve$x, n=1), digits = 2)
-  yn = round(tail(curve$y, n=1), digits = 2)
-  
-  #Converts list of 2 elements to dataframe
-  curve <- data.frame(x = curve$x, y = curve$y)
-  
-  #GGPlot with hexbin and the lowess curve
-  p <- ggplot(df, aes(x = df[,xcol], y = df[,ycol]), environment = environment()) 
-  
-  #Hexbin
-  if(show_hexbin == TRUE){
-    p <- p + geom_hex(colour = 'black',bins = 20) 
-    p <- p + scale_fill_gradientn(colours=c('grey96','black')) 
-  }
-  else{
-    p <- p + geom_point(colour = 'black')  
-  }
-  
-  p <- p + geom_line(data=curve, colour = 'red', aes(x = curve$x, y = curve$y)) 
-  #p <- p + geom_smooth(se = FALSE)
-  
-  #p <- p + ylim(1,50) --> This removes data, so I use the other option below
-  #check coord_cartesian from ggplot
-  p <- p + coord_cartesian(ylim = limits_for_y)
-  #p <- p + scale_y_continuous(breaks=breaks_for_y)
-  
-  p <- p + ggtitle(title)
-  p <- p + xlab(xcol)
-  p <- p + ylab(ycol)
-  p <- p + theme_bw()
-  
-  text = paste("LOWESS Curve: (",x0,",",y0,"),(",xn,",",yn,")", sep = "")
-  my_grob = grobTree(textGrob(text, x=0.1,  y=0.95, hjust=0, gp=gpar(col="red", fontsize=12, fontface="italic")))
-  p <- p + annotation_custom(my_grob)
-  
-  print_plot(p,outfile)
-}
-
-plot_loess = function(
-  df, xcol, ycol, limits_for_y = NULL, breaks_for_y = waiver(), spanvalue, show_hexbin = TRUE, title = NULL, 
-  outfile = NULL){
-  
-  #xvector <- df[[xcol]]
-  #yvector <- df[[ycol]]
-  
-  #### Calculates LOESS curve ######
-  #lo <- loess(y ~ x, data = data.frame(x = xvector, y = yvector), control = loess.control(iterations = 10))
-  #y.predict <- predict(lo, data.frame(x = xvector))
-  #curve <- data.frame(x = xvector, y = y.predict)
-  
-  #first point and last point of curve
-  
-  #x0 = round(head(curve$x, n=1), digits = 2)
-  #y0 = round(head(curve$y, n=1), digits = 2)
-  #xn = round(tail(curve$x, n=1), digits = 2)
-  #yn = round(tail(curve$y, n=1), digits = 2)
-  
-  #GGPlot with hexbin and the loess curve
-  p <- ggplot(df, aes(x = df[[xcol]], y = df[[ycol]]), environment = environment()) 
-  
-  #Hexbin
-  if(show_hexbin == TRUE){
-    p <- p + geom_hex(colour = 'black',bins = 20) 
-    p <- p + scale_fill_gradientn(colours=c('grey96','black')) 
-  }
-  else{
-    p <- p + geom_point(colour = 'black')  
-  }
-  
-  p <- p + geom_smooth(se = TRUE, method = "loess")
-  #p <- p + geom_line(data=curve, colour = 'red', aes(x = curve$x, y = curve$y)) 
-  
-  #p <- p + ylim(1,50) --> This removes data, so I use the other option below
-  #check coord_cartesian from ggplot
-  p <- p + coord_cartesian(ylim = limits_for_y)
-  p <- p + scale_y_continuous(breaks=breaks_for_y)
-  
-  p <- p + ggtitle(title)
-  p <- p + xlab(xcol)
-  p <- p + ylab(ycol)
-  p <- p + theme_bw()
-  
-  #text = paste("LOESS Curve: (",x0,",",y0,"),(",xn,",",yn,")", sep = "")
-  #my_grob = grobTree(textGrob(text, x=0.1,  y=0.95, hjust=0, gp=gpar(col="red", fontsize=12, fontface="italic")))
-  #p <- p + annotation_custom(my_grob)
-  
-  print_plot(p,outfile)
-}
-
-plot_loess_two_vars = function(
-  df, xcol, ycol, limits_for_y = NULL, breaks_for_y = waiver(), spanvalue, show_hexbin = TRUE, title = NULL, 
-  outfile = NULL){
-  
-  #GGPlot with hexbin and the loess curve
-  p <- ggplot(df, aes(x = df[[xcol]], y = df[[ycol]], ), environment = environment()) 
-  
-  #Hexbin
-  if(show_hexbin == TRUE){
-    p <- p + geom_hex(colour = 'black',bins = 20) 
-    p <- p + scale_fill_gradientn(colours=c('grey96','black')) 
-  }
-  else{
-    p <- p + geom_point(colour = 'black')  
-  }
-  
-  p <- p + geom_smooth(se = TRUE, method = "loess")
-  #p <- p + geom_line(data=curve, colour = 'red', aes(x = curve$x, y = curve$y)) 
-  
-  #p <- p + ylim(1,50) --> This removes data, so I use the other option below
-  #check coord_cartesian from ggplot
-  p <- p + coord_cartesian(ylim = limits_for_y)
-  p <- p + scale_y_continuous(breaks=breaks_for_y)
-  
-  p <- p + ggtitle(title)
-  p <- p + xlab(xcol)
-  p <- p + ylab(ycol)
-  p <- p + theme_bw()
-  
-  #text = paste("LOESS Curve: (",x0,",",y0,"),(",xn,",",yn,")", sep = "")
-  #my_grob = grobTree(textGrob(text, x=0.1,  y=0.95, hjust=0, gp=gpar(col="red", fontsize=12, fontface="italic")))
-  #p <- p + annotation_custom(my_grob)
-  
-  print_plot(p,outfile)
-}
-
-plot_lowess_loess = function(df, xcol, ycol, limits_for_y = NULL, breaks_for_y = waiver(), spanvalue, title){
-  
-  xvector <- df[[xcol]]
-  yvector <- df[[ycol]]
-  
-  #### Calculates LOWESS curve ######
-  
-  #Function as.numeric is applied to x and y components to make sure lowess
-  #can be calculated.
-  curve <- lowess(as.numeric(xvector), y = as.numeric(yvector), f = spanvalue, iter = 10)
-  
-  #first point and last point of curve
-  
-  x0 <- round(head(curve$x, n=1), digits = 2)
-  y0 <- round(head(curve$y, n=1), digits = 2)
-  xn <- round(tail(curve$x, n=1), digits = 2)
-  yn <- round(tail(curve$y, n=1), digits = 2)
-  
-  #Converts list of 2 elements to dataframe
-  curve <- data.frame(x = curve$x, y = curve$y)
-  
-  #GGPlot with hexbin and the lowess curve
-  p <- ggplot(df, aes(x = df[,xcol], y = df[,ycol]), environment = environment()) 
-  p <- p + geom_hex(colour = 'black',bins = 20) 
-  p <- p + scale_fill_gradientn(colours=c('grey96','black')) 
-  
-  p <- p + geom_line(data=curve, colour = 'red', aes(x = curve$x, y = curve$y)) 
-  #LOESS curve
-  p <- p + geom_smooth(se = FALSE)
-  
-  #p <- p + ylim(1,50) --> This removes data, so I use the other option below
-  #check coord_cartesian from ggplot
-  p <- p + coord_cartesian(ylim = limits_for_y)
-  p <- p + scale_y_continuous(breaks=breaks_for_y)
-  
-  p <- p + ggtitle(title)
-  p <- p + xlab(xcol)
-  p <- p + ylab(ycol)
-  p <- p + theme_bw()
-  
-  text <- paste("LOWESS Curve: (",x0,",",y0,"),(",xn,",",yn,")", sep = "")
-  my_grob <- grobTree(textGrob(text, x=0.1,  y=0.95, hjust=0, gp=gpar(col="red", fontsize=12, fontface="italic")))
-  p <- p + annotation_custom(my_grob)
-  
-  print_plot(p,title)
-}
-
-
-old_plot_lowess = function(df, xcol, ycol, spanvalue = 2/3, iter = 3, title){
-  
-  title <- paste(title,"(",spanvalue,")")
-  
-  xvector <- df[[xcol]]
-  yvector <- df[[ycol]]
-  
-  hbin <- hexbin(xvector,yvector, xbins = 10)
-  hplt <- plot(hbin, main = title)
-  
-  pushHexport(hplt$plot.vp)
-  
-  #Calculates LOWESS curve
-  #Function as.numeric is applied to x and y components to make sure lowess
-  #can be calculated.
-  curve <- lowess(as.numeric(xvector), y = as.numeric(yvector), f = spanvalue, iter = iter)
-  
-  #Adds the LOWESS curve to the graph
-  #The super intuitive parameter 'gp = gpar(col = 2)' is just the line color
-  grid.lines(curve$x, curve$y, gp = gpar(col = 2), default.units = "native")
-  
-  #Saves
-  #png(filename=paste(title,".png"),width = 1920, height = 1080)
-  #dev.off()
-}
-
-plot_scatterplot = function(df, xcol, ycol, limits_for_x = NULL, limits_for_y = NULL, title){
-  
-  xvector <- df[[xcol]]
-  yvector <- df[[ycol]]
-  data <- data.frame(xvector,yvector)
-  
-  medianForX <- median(xvector)
-  medianForY <- median(yvector)
-  
-  print(paste("Median for X:",medianForX))
-  print(paste("Median for Y:",medianForY))
-  
-  # Building the Scatterplot
-  p <- ggplot(data,aes(x=xvector,y=yvector)) 
-  p <- p + geom_point()
-  #plot = plot + scale_x_continuous(breaks=seq(0,12,0.5))
-  p <- p + geom_hline(linetype = "dashed", yintercept=medianForY, colour = "red")
-  p <- p + geom_vline(linetype = "dashed", xintercept=medianForX, colour = "red")
-  p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
-  p <- p + xlab(xcol)
-  p <- p + ylab(ycol)
-  p <- p + theme_bw()  
-  p <- p + ggtitle(title)
-  
-  print_plot(p,title)
-  
-  #scale_x_continuous(breaks=1:30, limits=c(1,30)
-  
-  #inquadrant = fn$sqldf("select count(*) as count from data where 
-  #                      support_count > '$medianSupportCount' and 
-  #                      median_hops > '$medianHops'")
-  
-  #cat("Number of elements in 1st Quadrant:", inquadrant$count, "\n")
-  #cat("Percentage:", percent(inquadrant$count / nrow(project)))
-  
-  #return(plot)
-}
-
-#Beta function
+#Not working
 getBreaksForNumTicks = function(data, numticks, round_to = NULL){
   min_value <- min(data)
   max_value <- max(data)
@@ -1051,27 +621,10 @@ getBreaksForNumTicks = function(data, numticks, round_to = NULL){
 #Prints plot to a file. 
 #Creates the sub-dirs in the path (in case they don't exist)
 print_plot = function(p, outfile = NULL, width=16, height=9, dpi=100){
-  
   if (!is.null(outfile)){
     dir <- str_extract(outfile,".*/")
     dir.create(dir, recursive = TRUE, showWarnings = FALSE)
     ggsave(outfile, plot = p, width=width, height=height, dpi=dpi)
   }
-  p
+  return(p)
 }
-
-#Trim images inside R using imager (relies on GraphicsMagick)
-#
-#library(imager)
-#trim_images = function(){
-#  
-#  original_path = "./results/imgs/"
-#  trimmed_path = "./results/imgs/trimmed/"
-#  
-#  image_file_list = list.files(path = original_path, pattern = "*.png")
-#  for(image_file in image_file_list){
-#    i = load.image(paste(original_path,image_file,sep=""))
-#    i = autocrop(i,color = c(255,255,255))
-#    save.image(i,paste(trimmed_path,image_file,sep=""))
-#  }
-#}
