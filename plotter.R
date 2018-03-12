@@ -3,6 +3,7 @@ library(ggplot2)
 library(Hmisc)
 library(hexbin)
 library(grid)
+library(RColorBrewer)
 
 #Old function (somewhat outdated)
 plot_line = function(
@@ -105,8 +106,9 @@ plot_point = function(
   df, xcol = NULL, ycol, varcol = NULL, xlab, ylab, use_colors = TRUE, use_shapes = FALSE, 
   breaks_for_x = waiver(), limits_for_x = NULL, minor_breaks_for_x = waiver(),  
   breaks_for_y = waiver(), limits_for_y = NULL, minor_breaks_for_y = waiver(),
-  include_labels = FALSE, labelcol = varcol, point_color = "black", flip = FALSE, 
-  title = NULL, fontsize = 22, outfile = NULL){
+  include_labels = FALSE, labelcol = varcol, labelsize = 4.0, 
+  point_color = "black", point_size = 3.0, flip = FALSE, 
+  title = NULL, fontsize = 22, outfile = NULL, pre_func = NULL){
   
   
   #Prepares aesthetics
@@ -140,7 +142,7 @@ plot_point = function(
   #p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
   
   if(is.factor(df[[xcol]])){
-    p <- p + scale_x_discrete()
+    p <- p + scale_x_discrete(limits = levels(df[[xcol]]))
     
     num_levels = length(levels(df[[xcol]]))
     reps = ceiling(num_levels/8)
@@ -150,11 +152,12 @@ plot_point = function(
     p <- p + scale_x_continuous(breaks=breaks_for_x, minor_breaks = minor_breaks_for_x)  
   }
   
-  if(include_labels == TRUE & !is.null(labelcol)){
-    p <- p + geom_text_repel(aes_string(label = labelcol), size = 4.0) 
+  if(!is.factor(df[[ycol]])){
+    p <- p + scale_y_continuous(breaks=breaks_for_y, minor_breaks = minor_breaks_for_y)
   }
-  
-  p <- p + scale_y_continuous(breaks=breaks_for_y, minor_breaks = minor_breaks_for_y)
+  else{
+    p <- p + scale_y_discrete(limits = levels(df[[ycol]]))
+  }
   
   p <- p + coord_cartesian(ylim = limits_for_y)
   
@@ -163,11 +166,19 @@ plot_point = function(
     p <- p + coord_flip(ylim = limits_for_y)
   }
   
+  if(!is.null(pre_func)){
+    p <- p + pre_func
+  }
+  
+  if(include_labels == TRUE & !is.null(labelcol)){
+    p <- p + geom_text_repel(aes_string(label = labelcol), size = labelsize, max.iter = 10000) 
+  }
+  
   if(is.null(varcol)){
-    p <- p + geom_point(size = 3, color = point_color)  
+    p <- p + geom_point(size = point_size, color = point_color)  
   }
   else{
-    p <- p + geom_point(size = 3)
+    p <- p + geom_point(size = point_size)
   }
   
   p <- p + ggtitle(title)
@@ -431,8 +442,8 @@ plot_violin = function(
   df, xcol = NULL, ycol, groupcol = NULL, facetcol = NULL, xlab = xcol, ylab = ycol, grouplab = groupcol, 
   colored_groups = FALSE, xticklab = NULL, trim = TRUE,  split = FALSE, limits_for_y = NULL, breaks_for_y = waiver(), 
   showboxplot = FALSE, boxplot_width = 0.1, dodge_width = 0.9, scale = "area", transformation = "identity", 
-  show_legend = TRUE, legend_title = groupcol, legend_labels = waiver(), legend_position = "right",
-  outfile = NULL, title = NULL, fontsize = 22){
+  flip = FALSE, flip_facet = FALSE, show_legend = TRUE, legend_title = groupcol, legend_labels = waiver(), 
+  legend_position = "right", outfile = NULL, title = NULL, fontsize = 22){
   
   #Sets the dodge (space between plots from the same group)
   dodge <- position_dodge(width = dodge_width)
@@ -516,10 +527,21 @@ plot_violin = function(
   
   #Facets choice
   if(!is.null(facetcol)){
-    p = p + facet_grid(reformulate(facetcol))
+    if(flip_facet == TRUE){
+      p = p + facet_grid(reformulate(".",facetcol))  
+    }
+    else{
+      p = p + facet_grid(reformulate(facetcol,"."))
+    }
+    
   }
   
   p <- p + coord_cartesian(ylim = limits_for_y)
+  
+  #Should flip?
+  if(flip == TRUE){
+    p <- p + coord_flip(ylim = limits_for_y)
+  }
   
   if(!is.null(xticklab)){
     p <- p + scale_x_discrete(labels=xticklab)
