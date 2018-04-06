@@ -159,7 +159,7 @@ plot_point = function(
     p <- p + scale_y_discrete(limits = levels(df[[ycol]]))
   }
   
-  p <- p + coord_cartesian(ylim = limits_for_y)
+  p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
   
   #Should flip?
   if(flip == TRUE){
@@ -352,7 +352,7 @@ plot_freqhistogram_categorical = function(
 plot_boxplot = function(
   df, xcol = NULL, ycol, groupcol = NULL, xlab = NULL, ylab = NULL, grouplab = groupcol, 
   xticklab = NULL, breaks_for_y = waiver(), limits_for_y = NULL, trans_for_y = "identity", flip = FALSE, 
-  show_legend = TRUE, legend_title = groupcol, legend_labels = waiver(), 
+  show_legend = TRUE, legend_title = groupcol, legend_labels = waiver(), legend_position = "right",
   title = NULL, outfile = NULL, fontsize = 22, colored_groups = FALSE, 
   groups_as_facets = FALSE){
   
@@ -434,6 +434,7 @@ plot_boxplot = function(
   
   #Theme Black/White
   p <- p + theme_bw(base_size = fontsize) 
+  p <- p + theme(legend.position = legend_position, legend.box = "horizontal")
   
   print_plot(p,outfile)
 }
@@ -495,14 +496,14 @@ plot_violin = function(
     #Split violin requires aesthetics to be in this order: "x,y,fill", so we make
     #sure aesthetics are given in this order to it
     geom_split_aes = aesthetics["x","y","fill"]
-    p <- p + geom_split_violin(groupcol, mapping = geom_split_aes, scale = scale)
+    p <- p + geom_split_violin(groupcol, mapping = geom_split_aes, scale = scale, trim = trim)
     
     if(is.null(groupcol)){
       p <- p + stat_summary(fun.y=median, geom="point", shape=23, size=3, fill = "black", position = dodge)
     }
     else{
       p <- p + stat_summary(
-        fun.data="plot.median", geom="errorbar", colour="black", width=0.90, size=1, position = dodge)  
+        fun.data="plot.median", geom="errorbar", colour="grey20", width=0.90, size=0.8, position = dodge)  
     }
     
   }
