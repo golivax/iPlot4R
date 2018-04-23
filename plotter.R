@@ -350,18 +350,17 @@ plot_freqhistogram_categorical = function(
 }
 
 plot_boxplot = function(
-  df, xcol = NULL, ycol, groupcol = NULL, xlab = NULL, ylab = NULL, grouplab = groupcol, 
-  xticklab = NULL, breaks_for_y = waiver(), limits_for_y = NULL, trans_for_y = "identity", flip = FALSE, 
-  show_legend = TRUE, legend_title = groupcol, legend_labels = waiver(), legend_position = "right",
-  title = NULL, outfile = NULL, fontsize = 22, colored_groups = FALSE, 
-  groups_as_facets = FALSE){
+  df, xcol = NULL, ycol, groupcol = NULL, facetcol = NULL, xlab = NULL, ylab = NULL, grouplab = groupcol, 
+  colored_groups = FALSE, xticklab = NULL, breaks_for_y = waiver(), limits_for_y = NULL, trans_for_y = "identity", 
+  flip = FALSE, flip_facet = FALSE, facet_spacing = 1, show_legend = TRUE, legend_title = groupcol, legend_labels = waiver(), 
+  legend_position = "right", title = NULL, outfile = NULL, fontsize = 22){
   
   #Prepares aesthetics
   if(is.null(xcol)){
     aesthetics <- aes_string(x = as.factor(""), y = ycol)
   }
   else{
-    if(is.null(groupcol) | groups_as_facets == TRUE){
+    if(is.null(groupcol)){
       aesthetics <- aes_string(x = xcol, y = ycol)
     }
     else{
@@ -384,16 +383,15 @@ plot_boxplot = function(
     }
   }
   
+  #Same thing for facetcol
+  if(!is.null(facetcol)){
+    if(!is.factor(df[[facetcol]])){
+      df[[facetcol]] <- factor(df[[facetcol]], levels = unique(df[[facetcol]]))
+    }
+  }
+  
   p <- ggplot(df, aesthetics, environment = environment()) 
   p <- p + geom_boxplot()
-  
-  #Y scale
-  p <- p + scale_y_continuous(breaks=breaks_for_y, trans = trans_for_y)
-  
-  #X scale
-  if(!is.null(xticklab)){
-    p <- p + scale_x_discrete(labels=xticklab)
-  }
   
   #Deals with groups
   if(!is.null(groupcol)){
@@ -410,10 +408,15 @@ plot_boxplot = function(
     if(show_legend == FALSE){
       p <- p + guides(fill=FALSE)
     }
-    
-    #Facets choice
-    if(groups_as_facets == TRUE){
-      p = p + facet_grid(reformulate(groupcol))
+  }
+  
+  #Deals with facets
+  if(!is.null(facetcol)){
+    if(flip_facet == TRUE){
+      p = p + facet_grid(reformulate(".",facetcol))  
+    }
+    else{
+      p = p + facet_grid(reformulate(facetcol,"."))
     }
     
   }
@@ -426,6 +429,14 @@ plot_boxplot = function(
     p <- p + coord_flip(ylim = limits_for_y)
   }
   
+  #X scale
+  if(!is.null(xticklab)){
+    p <- p + scale_x_discrete(labels=xticklab)
+  }
+  
+  #Y-scale is assumed to be continuous
+  p <- p + scale_y_continuous(breaks=breaks_for_y, trans = trans_for_y)
+  
   #Axis labels
   p <- p + xlab(xlab) + ylab(ylab)
   
@@ -434,9 +445,13 @@ plot_boxplot = function(
   
   #Theme Black/White
   p <- p + theme_bw(base_size = fontsize) 
-  p <- p + theme(legend.position = legend_position, legend.box = "horizontal")
+  p <- p + theme(legend.position = legend_position, 
+                 legend.box = "horizontal",
+                 panel.spacing = unit(facet_spacing, "lines"))
+  
   
   print_plot(p,outfile)
+  return(p)
 }
 
 plot_violin = function(
@@ -474,6 +489,13 @@ plot_violin = function(
   if(!is.null(groupcol)){
     if(!is.factor(df[[groupcol]])){
       df[[groupcol]] <- factor(df[[groupcol]], levels = unique(df[[groupcol]]))
+    }
+  }
+  
+  #Same thing for facetcol
+  if(!is.null(facetcol)){
+    if(!is.factor(df[[facetcol]])){
+      df[[facetcol]] <- factor(df[[facetcol]], levels = unique(df[[facetcol]]))
     }
   }
   
