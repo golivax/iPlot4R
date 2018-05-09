@@ -350,10 +350,11 @@ plot_freqhistogram_categorical = function(
 }
 
 plot_boxplot = function(
-  df, xcol = NULL, ycol, groupcol = NULL, facetcol = NULL, xlab = NULL, ylab = NULL, grouplab = groupcol, 
-  colored_groups = FALSE, xticklab = NULL, breaks_for_y = waiver(), limits_for_y = NULL, trans_for_y = "identity", 
-  flip = FALSE, flip_facet = FALSE, facet_spacing = 1, show_legend = TRUE, legend_title = groupcol, legend_labels = waiver(), 
-  legend_position = "right", title = NULL, outfile = NULL, fontsize = 22){
+  df, xcol = NULL, ycol, groupcol = NULL, facetcol = NULL, xlab = NULL, ylab = NULL, facetlabs = NULL, 
+  colored_groups = FALSE, xticklab = NULL, breaks_for_y = waiver(), limits_for_y = NULL, 
+  trans_for_y = "identity", flip = FALSE, flip_facet = FALSE, facet_spacing = 1, show_legend = TRUE, 
+  legend_title = groupcol, legend_labels = waiver(), legend_position = "right", title = NULL, outfile = NULL, 
+  fontsize = 22){
   
   #Prepares aesthetics
   if(is.null(xcol)){
@@ -387,6 +388,9 @@ plot_boxplot = function(
   if(!is.null(facetcol)){
     if(!is.factor(df[[facetcol]])){
       df[[facetcol]] <- factor(df[[facetcol]], levels = unique(df[[facetcol]]))
+    }
+    if(!is.null(facetlabs)){
+      levels(df[[facetcol]]) = facetlabs
     }
   }
   
@@ -455,7 +459,7 @@ plot_boxplot = function(
 }
 
 plot_violin = function(
-  df, xcol = NULL, ycol, groupcol = NULL, facetcol = NULL, xlab = xcol, ylab = ycol, grouplab = groupcol, 
+  df, xcol = NULL, ycol, groupcol = NULL, facetcol = NULL, xlab = xcol, ylab = ycol, facetlabs = NULL, 
   colored_groups = FALSE, xticklab = NULL, trim = TRUE,  split = FALSE, limits_for_y = NULL, breaks_for_y = waiver(), 
   showboxplot = FALSE, boxplot_width = 0.1, dodge_width = 0.9, scale = "area", transformation = "identity", 
   flip = FALSE, flip_facet = FALSE, show_legend = TRUE, legend_title = groupcol, legend_labels = waiver(), 
@@ -496,6 +500,9 @@ plot_violin = function(
   if(!is.null(facetcol)){
     if(!is.factor(df[[facetcol]])){
       df[[facetcol]] <- factor(df[[facetcol]], levels = unique(df[[facetcol]]))
+    }
+    if(!is.null(facetlabs)){
+      levels(df[[facetcol]]) = facetlabs
     }
   }
   
