@@ -5,103 +5,6 @@ library(hexbin)
 library(grid)
 library(RColorBrewer)
 
-#Old function (somewhat outdated)
-plot_line = function(
-  df, xcol, ycol, varcol, lineColours = NULL, xlab, breaks_for_x = waiver(), limits_for_x = NULL, ylab, 
-  breaks_for_y = waiver(), limits_for_y = NULL, showpoints = FALSE, smooth = FALSE, title = NULL, fontsize = 22, 
-  outfile = NULL){
-  
-  x <- df[[xcol]]
-  y <- df[[ycol]]
-  colour <- df[[varcol]]
-  
-  p <- ggplot(data = df, aes(x = x, y = y, colour = colour), environment = environment())
- 
-  p <- p + xlab(xlab) + ylab(ylab)
-  #p <- p + guides(colour = FALSE)
-  
-  if(!is.null(lineColours)){
-    p <- p + scale_color_manual(values = lineColours)  
-  }
-
-  p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
-  
-  p <- p + scale_x_continuous(breaks=breaks_for_x)
-  p <- p + scale_y_continuous(breaks=breaks_for_y)
-  p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
-  
-  if(smooth == TRUE){
-    p <- p + geom_smooth()
-  }
-  else{
-    p <- p + geom_line()
-    if(showpoints == TRUE){
-      p <- p + geom_point()
-    }
-  }
-  
-  p <- p + ggtitle(title)
-  p <- p + theme_bw(base_size = fontsize)
-  
-  print_plot(p,outfile)
-  return(p)
-}
-
-plot_bubble = function(
-  df, xcol, ycol, sizecol, xlab = xcol, breaks_for_x = waiver(), limits_for_x = NULL, ylab = ycol, 
-  breaks_for_y = waiver(), limits_for_y = NULL, sizelab = sizecol, title = NULL, smooth = FALSE, fontsize = 22, 
-  outfile = NULL){
-  
-  p <- ggplot(data = df, aes_string(x = xcol, y = ycol, size = sizecol), environment = environment())
-  
-  p <- p + xlab(xlab) + ylab(ylab)
-  p <- p + labs(size=sizelab)
-  
-  p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
-  
-  p <- p + scale_x_continuous(breaks=breaks_for_x)
-  p <- p + scale_y_continuous(breaks=breaks_for_y)
-  p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
-
-  if(smooth == TRUE){
-    p <- p + geom_smooth()
-  }
-  
-  p <- p + geom_point(shape = 21, alpha = 0.7, colour = "#1e6c7b", fill = "#40b8d0")
-  p <- p + ggtitle(title)
-  p <- p + theme_bw(base_size = fontsize)
-  
-  print_plot(p,outfile)
-  return(p)
-}
-
-
-plot_hexbin = function(
-  df, xcol, ycol, numbins = 30, xlab = NULL, breaks_for_x = waiver(), limits_for_x = NULL, ylab = NULL, 
-  breaks_for_y = waiver(), limits_for_y = NULL, title = NULL, fontsize = 22, outfile = NULL){
-  
-  p <- ggplot(data = df, aes_string(x = xcol, y = ycol), environment = environment())
-  
-  p <- p + xlab(xlab) + ylab(ylab)
-  #p <- p + guides(colour = FALSE)
-  
-  p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
-  
-  p <- p + scale_x_continuous(breaks=breaks_for_x)
-  p <- p + scale_y_continuous(breaks=breaks_for_y)
-  p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
-  
-  p <- p + geom_hex(bins = numbins, colour = "grey")
-  p <- p + scale_fill_gradient(low = "#ffe8e8", high = "#990000")
-  #p <- p + scale_fill_gradient(low = "white", high = "black")
-  
-  p <- p + ggtitle(title)
-  p <- p + theme_bw(base_size = fontsize)
-  
-  print_plot(p,outfile)
-  return(p)
-}
-
 plot_point = function(
   df, xcol = NULL, ycol, varcol = NULL, xlab, ylab, use_colors = TRUE, use_shapes = FALSE, 
   breaks_for_x = waiver(), limits_for_x = NULL, minor_breaks_for_x = waiver(),  
@@ -109,7 +12,6 @@ plot_point = function(
   include_labels = FALSE, labelcol = varcol, labelsize = 4.0, 
   point_color = "black", point_size = 3.0, flip = FALSE, 
   title = NULL, fontsize = 22, outfile = NULL, pre_func = NULL){
-  
   
   #Prepares aesthetics
   if(is.null(xcol)){
@@ -184,6 +86,151 @@ plot_point = function(
   p <- p + ggtitle(title)
   p <- p + theme_bw(base_size = fontsize)
   p <- p + theme(plot.title = element_text(hjust = 0.5))
+  
+  print_plot(p,outfile)
+  return(p)
+}
+
+plot_line = function(
+  df, xcol = NULL, ycol, varcol = NULL, xlab, ylab, use_colors = TRUE, use_shapes = FALSE, 
+  smooth = FALSE, smooth_alpha = 0.4, showpoints = FALSE,
+  breaks_for_x = waiver(), limits_for_x = NULL, minor_breaks_for_x = waiver(),  
+  breaks_for_y = waiver(), limits_for_y = NULL, minor_breaks_for_y = waiver(),
+  include_labels = FALSE, labelcol = varcol, labelsize = 4.0, 
+  flip = FALSE, title = NULL, fontsize = 22, outfile = NULL, pre_func = NULL){
+  
+  #Prepares aesthetics
+  if(is.null(xcol)){
+    aesthetics <- aes_string(x = as.factor(""), y = ycol)
+  }
+  else{
+    if(is.null(varcol)){
+      aesthetics <- aes_string(x = xcol, y = ycol)
+    }
+    else{
+      
+      if(use_colors == TRUE & use_shapes == FALSE){
+        aesthetics <- aes_string(x = xcol, y = ycol, color = varcol)  
+      }
+      if(use_colors == FALSE & use_shapes == TRUE){
+        aesthetics <- aes_string(x = xcol, y = ycol, shapes = varcol)
+      }
+      if(use_colors == TRUE & use_shapes == TRUE){
+        aesthetics <- aes_string(x = xcol, y = ycol, color = varcol, shapes = varcol)
+      }
+      
+    }
+  }
+  
+  p <- ggplot(df, aesthetics, environment = environment()) 
+ 
+  p <- p + xlab(xlab) + ylab(ylab)
+  p <- p + guides(colour = FALSE)
+  
+  #p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
+  
+  if(is.factor(df[[xcol]])){
+    p <- p + scale_x_discrete(limits = levels(df[[xcol]]))
+    
+    num_levels = length(levels(df[[xcol]]))
+    reps = ceiling(num_levels/8)
+    p <- p + scale_color_manual(values = rep(brewer.pal(n = 8, "Dark2"),reps))
+  }
+  else{
+    p <- p + scale_x_continuous(breaks=breaks_for_x, minor_breaks = minor_breaks_for_x)  
+  }
+  
+  if(!is.factor(df[[ycol]])){
+    p <- p + scale_y_continuous(breaks=breaks_for_y, minor_breaks = minor_breaks_for_y)
+  }
+  else{
+    p <- p + scale_y_discrete(limits = levels(df[[ycol]]))
+  }
+  
+  p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
+  
+  #Should flip?
+  if(flip == TRUE){
+    p <- p + coord_flip(ylim = limits_for_y)
+  }
+  
+  if(!is.null(pre_func)){
+    p <- p + pre_func
+  }
+  
+  if(include_labels == TRUE & !is.null(labelcol)){
+    p <- p + geom_text_repel(aes_string(label = labelcol), size = labelsize, max.iter = 10000) 
+  }
+  
+  if(smooth == TRUE){
+    p <- p + geom_smooth(alpha = smooth_alpha)
+  }
+  else{
+    p <- p + geom_line()
+    if(showpoints == TRUE){
+      p <- p + geom_point()
+    }
+  }
+  
+  p <- p + ggtitle(title)
+  p <- p + theme_bw(base_size = fontsize)
+  p <- p + theme(plot.title = element_text(hjust = 0.5))
+  
+  print_plot(p,outfile)
+  return(p)
+}
+
+
+plot_bubble = function(
+  df, xcol, ycol, sizecol, xlab = xcol, breaks_for_x = waiver(), limits_for_x = NULL, ylab = ycol, 
+  breaks_for_y = waiver(), limits_for_y = NULL, sizelab = sizecol, title = NULL, smooth = FALSE, fontsize = 22, 
+  outfile = NULL){
+  
+  p <- ggplot(data = df, aes_string(x = xcol, y = ycol, size = sizecol), environment = environment())
+  
+  p <- p + xlab(xlab) + ylab(ylab)
+  p <- p + labs(size=sizelab)
+  
+  p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
+  
+  p <- p + scale_x_continuous(breaks=breaks_for_x)
+  p <- p + scale_y_continuous(breaks=breaks_for_y)
+  p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
+
+  if(smooth == TRUE){
+    p <- p + geom_smooth()
+  }
+  
+  p <- p + geom_point(shape = 21, alpha = 0.7, colour = "#1e6c7b", fill = "#40b8d0")
+  p <- p + ggtitle(title)
+  p <- p + theme_bw(base_size = fontsize)
+  
+  print_plot(p,outfile)
+  return(p)
+}
+
+
+plot_hexbin = function(
+  df, xcol, ycol, numbins = 30, xlab = NULL, breaks_for_x = waiver(), limits_for_x = NULL, ylab = NULL, 
+  breaks_for_y = waiver(), limits_for_y = NULL, title = NULL, fontsize = 22, outfile = NULL){
+  
+  p <- ggplot(data = df, aes_string(x = xcol, y = ycol), environment = environment())
+  
+  p <- p + xlab(xlab) + ylab(ylab)
+  #p <- p + guides(colour = FALSE)
+  
+  p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
+  
+  p <- p + scale_x_continuous(breaks=breaks_for_x)
+  p <- p + scale_y_continuous(breaks=breaks_for_y)
+  p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
+  
+  p <- p + geom_hex(bins = numbins, colour = "grey")
+  p <- p + scale_fill_gradient(low = "#ffe8e8", high = "#990000")
+  #p <- p + scale_fill_gradient(low = "white", high = "black")
+  
+  p <- p + ggtitle(title)
+  p <- p + theme_bw(base_size = fontsize)
   
   print_plot(p,outfile)
   return(p)
