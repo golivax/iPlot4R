@@ -7,10 +7,11 @@ library(RColorBrewer)
 
 plot_point = function(
   df, xcol = NULL, ycol, varcol = NULL, xlab, ylab, use_colors = TRUE, use_shapes = FALSE, 
-  breaks_for_x = waiver(), limits_for_x = NULL, minor_breaks_for_x = waiver(),  
-  breaks_for_y = waiver(), limits_for_y = NULL, minor_breaks_for_y = waiver(),
+  breaks_for_x = waiver(), limits_for_x = NULL, minor_breaks_for_x = waiver(), trans_for_x = "identity",
+  breaks_for_y = waiver(), limits_for_y = NULL, minor_breaks_for_y = waiver(), trans_for_y = "identity",
   include_labels = FALSE, labelcol = varcol, labelsize = 4.0, 
   point_color = "black", point_size = 3.0, flip = FALSE, 
+  smooth = FALSE, smooth_alpha = 0.4,
   title = NULL, fontsize = 22, outfile = NULL, pre_func = NULL){
   
   #Prepares aesthetics
@@ -51,11 +52,11 @@ plot_point = function(
     p <- p + scale_color_manual(values = rep(brewer.pal(n = 8, "Dark2"),reps))
   }
   else{
-    p <- p + scale_x_continuous(breaks=breaks_for_x, minor_breaks = minor_breaks_for_x)  
+    p <- p + scale_x_continuous(breaks=breaks_for_x, minor_breaks = minor_breaks_for_x, trans = trans_for_x)  
   }
   
   if(!is.factor(df[[ycol]])){
-    p <- p + scale_y_continuous(breaks=breaks_for_y, minor_breaks = minor_breaks_for_y)
+    p <- p + scale_y_continuous(breaks=breaks_for_y, minor_breaks = minor_breaks_for_y, trans = trans_for_y)
   }
   else{
     p <- p + scale_y_discrete(limits = levels(df[[ycol]]))
@@ -81,6 +82,10 @@ plot_point = function(
   }
   else{
     p <- p + geom_point(size = point_size)
+  }
+  
+  if(smooth == TRUE){
+    p <- p + geom_smooth(alpha = smooth_alpha)
   }
   
   p <- p + ggtitle(title)
@@ -319,9 +324,13 @@ plot_barchart = function(
   if(!is.null(groupcol)){
     groups <- as.factor(df[[groupcol]])
     groups <- factor(groups, levels=rev(levels(groups)))
+    
+    p <- ggplot(df, aes(x=categories, y=values, fill = groups, label=values), environment = environment()) 
+  }
+  else{
+    p <- ggplot(df, aes(x=categories, y=values, label=values), environment = environment()) 
   }
   
-  p <- ggplot(df, aes(x=categories, y=values, fill = groups, label=values), environment = environment()) 
   p <- p + geom_col(colour="black", width = 1 - space_between_bars)
     
   if(showvalues == TRUE){
