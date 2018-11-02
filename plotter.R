@@ -6,12 +6,12 @@ library(grid)
 library(RColorBrewer)
 
 plot_point = function(
-  df, xcol = NULL, ycol, varcol = NULL, xlab, ylab, use_colors = TRUE, use_shapes = FALSE, 
+  df, xcol = NULL, ycol, varcol = NULL, xlab = NULL, ylab = NULL, use_colors = TRUE, use_shapes = FALSE, 
   breaks_for_x = waiver(), limits_for_x = NULL, minor_breaks_for_x = waiver(), trans_for_x = "identity",
   breaks_for_y = waiver(), limits_for_y = NULL, minor_breaks_for_y = waiver(), trans_for_y = "identity",
   include_labels = FALSE, labelcol = varcol, labelsize = 4.0, 
   point_color = "black", point_size = 3.0, flip = FALSE, 
-  smooth = FALSE, smooth_alpha = 0.4,
+  smooth = FALSE, smooth_span = 0.75, smooth_alpha = 0.4,
   title = NULL, fontsize = 22, outfile = NULL, pre_func = NULL){
   
   #Prepares aesthetics
@@ -41,8 +41,6 @@ plot_point = function(
   
   p <- p + xlab(xlab) + ylab(ylab)
   p <- p + guides(colour = FALSE)
-  
-  #p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
   
   if(is.factor(df[[xcol]])){
     p <- p + scale_x_discrete(limits = levels(df[[xcol]]))
@@ -85,7 +83,7 @@ plot_point = function(
   }
   
   if(smooth == TRUE){
-    p <- p + geom_smooth(alpha = smooth_alpha)
+    p <- p + geom_smooth(span = smooth_span, alpha = smooth_alpha)
   }
   
   p <- p + ggtitle(title)
@@ -188,54 +186,120 @@ plot_line = function(
 
 plot_bubble = function(
   df, xcol, ycol, sizecol, xlab = xcol, breaks_for_x = waiver(), limits_for_x = NULL, ylab = ycol, 
-  breaks_for_y = waiver(), limits_for_y = NULL, sizelab = sizecol, title = NULL, smooth = FALSE, fontsize = 22, 
-  outfile = NULL){
+  breaks_for_y = waiver(), limits_for_y = NULL, sizelab = sizecol, flip = FALSE, pre_func = NULL,
+  include_labels = FALSE, labelsize = 4.0, title = NULL, smooth = FALSE, fontsize = 22, 
+  legend_position = "right", outfile = NULL){
   
-  p <- ggplot(data = df, aes_string(x = xcol, y = ycol, size = sizecol), environment = environment())
+ 
+  aesthetics <- aes_string(x = xcol, y = ycol, size = sizecol)
+  p <- ggplot(df, aesthetics, environment = environment()) 
   
   p <- p + xlab(xlab) + ylab(ylab)
   p <- p + labs(size=sizelab)
   
-  p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
+  if(is.factor(df[[xcol]])){
+    p <- p + scale_x_discrete(limits = levels(df[[xcol]]))
+  }
+  else{
+    p <- p + scale_x_continuous(breaks=breaks_for_x, minor_breaks = minor_breaks_for_x, trans = trans_for_x)  
+  }
   
-  p <- p + scale_x_continuous(breaks=breaks_for_x)
-  p <- p + scale_y_continuous(breaks=breaks_for_y)
+  if(!is.factor(df[[ycol]])){
+    p <- p + scale_y_continuous(breaks=breaks_for_y, minor_breaks = minor_breaks_for_y, trans = trans_for_y)
+  }
+  else{
+    p <- p + scale_y_discrete(limits = levels(df[[ycol]]))
+  }
+  
   p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
-
-  if(smooth == TRUE){
-    p <- p + geom_smooth()
+  
+  #Should flip?
+  if(flip == TRUE){
+    p <- p + coord_flip(ylim = limits_for_y)
+  }
+  
+  if(!is.null(pre_func)){
+    p <- p + pre_func
+  }
+  
+  if(include_labels == TRUE & !is.null(sizecol)){
+    p <- p + geom_text_repel(aes_string(label = sizecol), size = labelsize, max.iter = 10000) 
   }
   
   p <- p + geom_point(shape = 21, alpha = 0.7, colour = "#1e6c7b", fill = "#40b8d0")
+  
+  if(smooth == TRUE){
+    p <- p + geom_smooth(alpha = smooth_alpha)
+  }
+  
   p <- p + ggtitle(title)
   p <- p + theme_bw(base_size = fontsize)
+  p <- p + theme(plot.title = element_text(hjust = 0.5),
+                 legend.position = legend_position, 
+                 legend.box = "horizontal")
   
   print_plot(p,outfile)
   return(p)
 }
 
-
 plot_hexbin = function(
-  df, xcol, ycol, numbins = 30, xlab = NULL, breaks_for_x = waiver(), limits_for_x = NULL, ylab = NULL, 
-  breaks_for_y = waiver(), limits_for_y = NULL, title = NULL, fontsize = 22, outfile = NULL){
+  df, xcol = NULL, ycol, numbins = 30, xlab = NULL, ylab = NULL,
+  breaks_for_x = waiver(), limits_for_x = NULL, minor_breaks_for_x = waiver(), trans_for_x = "identity",
+  breaks_for_y = waiver(), limits_for_y = NULL, minor_breaks_for_y = waiver(), trans_for_y = "identity",
+  flip = FALSE, 
+  smooth = FALSE, smooth_span = 0.75, smooth_alpha = 0.4,
+  title = NULL, fontsize = 22, outfile = NULL, pre_func = NULL){
   
-  p <- ggplot(data = df, aes_string(x = xcol, y = ycol), environment = environment())
+  #Prepares aesthetics
+  if(is.null(xcol)){
+    aesthetics <- aes_string(x = as.factor(""), y = ycol)
+  }
+  else{
+    aesthetics <- aes_string(x = xcol, y = ycol)
+  }
+  
+  p <- ggplot(df, aesthetics, environment = environment()) 
   
   p <- p + xlab(xlab) + ylab(ylab)
-  #p <- p + guides(colour = FALSE)
+  p <- p + guides(colour = FALSE)
   
-  p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
+  #p <- p + theme(legend.position = "bottom", legend.box = "horizontal")
   
-  p <- p + scale_x_continuous(breaks=breaks_for_x)
-  p <- p + scale_y_continuous(breaks=breaks_for_y)
+  if(is.factor(df[[xcol]])){
+    p <- p + scale_x_discrete(limits = levels(df[[xcol]]))
+  }
+  else{
+    p <- p + scale_x_continuous(breaks=breaks_for_x, minor_breaks = minor_breaks_for_x, trans = trans_for_x)  
+  }
+  
+  if(is.factor(df[[ycol]])){
+    p <- p + scale_y_discrete(limits = levels(df[[ycol]]))
+  }
+  else{
+    p <- p + scale_y_continuous(breaks=breaks_for_y, minor_breaks = minor_breaks_for_y, trans = trans_for_y)
+  }
+  
   p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
   
+  #Should flip?
+  if(flip == TRUE){
+    p <- p + coord_flip(ylim = limits_for_y)
+  }
+  
+  if(!is.null(pre_func)){
+    p <- p + pre_func
+  }
+  
   p <- p + geom_hex(bins = numbins, colour = "grey")
-  p <- p + scale_fill_gradient(low = "#ffe8e8", high = "#990000")
-  #p <- p + scale_fill_gradient(low = "white", high = "black")
+  p <- p + scale_fill_gradient(low = "#fff1f1", high = "#990000")
+  
+  if(smooth == TRUE){
+    p <- p + geom_smooth(alpha = smooth_alpha, span = smooth_span)
+  }
   
   p <- p + ggtitle(title)
   p <- p + theme_bw(base_size = fontsize)
+  p <- p + theme(plot.title = element_text(hjust = 0.5))
   
   print_plot(p,outfile)
   return(p)
@@ -312,10 +376,10 @@ plot_histogram =  function(
 
 #Plot whatever value is passed to it without performing any computation
 plot_barchart = function(
-  df, xcol, ycol, groupcol = NULL, flip = FALSE, showvalues = TRUE, breaks_for_x = NULL, 
+  df, xcol, ycol, groupcol = NULL, flip = FALSE, showvalues = TRUE, values_size = 6, position = "stack", breaks_for_x = NULL, 
   trim = TRUE, xlab = NULL, ylab = NULL, space_between_bars = 0.1, xticklab = NULL, limits_for_x = NULL, 
   breaks_for_y = waiver(), limits_for_y = NULL, title = NULL, show_legend = TRUE, legend_title = groupcol, 
-  legend_labels = waiver(), outfile = NULL, fontsize = 22){
+  legend_labels = waiver(), legend_position = "right", outfile = NULL, fontsize = 22){
   
   categories <- df[[xcol]]
   values <- df[[ycol]]
@@ -331,10 +395,15 @@ plot_barchart = function(
     p <- ggplot(df, aes(x=categories, y=values, label=values), environment = environment()) 
   }
   
-  p <- p + geom_col(colour="black", width = 1 - space_between_bars)
+  p <- p + geom_col(width = 1 - space_between_bars, position = position)
     
   if(showvalues == TRUE){
-    p <- p + geom_text(size = 6, position = position_stack(vjust = 0.5))
+    if(position == "stack"){
+      p <- p + geom_text(size = values_size, position = position_stack(vjust = 0.5))  
+    }
+    else if(position == "dodge"){
+      p <- p + geom_text(size = values_size, position = position_dodge(1 - space_between_bars), vjust = -0.3)  
+    }
   }
   
   if(!is.null(breaks_for_x)){
@@ -365,9 +434,10 @@ plot_barchart = function(
   if(!is.null(groupcol)){
     
     if(show_legend == TRUE){
-      p <- p + scale_fill_discrete(labels = rev(legend_labels), l = 85, c = 40)
-      p <- p + theme(legend.position = "top")
-      p <- p + guides(fill = guide_legend(title = legend_title, reverse = TRUE))  
+      p <- p + scale_fill_discrete(labels = legend_labels, l = 85, c = 40)
+      p <- p + theme(legend.position = legend_position, 
+                     legend.margin=margin(t = 0, unit='cm'))
+      p <- p + guides(fill = guide_legend(title = legend_title, reverse = FALSE))  
     }
     else{
       p <- p + guides(fill = FALSE)
@@ -376,8 +446,6 @@ plot_barchart = function(
    
   print_plot(p,outfile)
 }
-  
-  
 
 #Plots the frequency (count) of every category in datacol 
 #(e.g., datacol = c("A","A","A","B","C")). If a group col is provided, then
@@ -570,7 +638,7 @@ plot_violin = function(
     
     #Adds the boxplot if requested
     if(showboxplot == TRUE){
-      p = p + geom_boxplot(width=boxplot_width, outlier.size = 1, position = dodge)  
+      p = p + geom_boxplot(width=boxplot_width, position = dodge, outlier.size = 1, outlier.alpha = 0.5, color = "gray30")  
     }
     #Otherwise, add a point to denote the median
     else{
