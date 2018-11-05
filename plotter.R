@@ -4,6 +4,8 @@ library(Hmisc)
 library(hexbin)
 library(grid)
 library(RColorBrewer)
+library(data.table)
+library(stringr)
 
 plot_point = function(
   df, xcol = NULL, ycol, varcol = NULL, xlab = NULL, ylab = NULL, use_colors = TRUE, use_shapes = FALSE, 
