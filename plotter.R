@@ -650,7 +650,7 @@ plot_violin = function(
   else{
     #Split violin requires aesthetics to be in this order: "x,y,fill", so we make
     #sure aesthetics are given in this order to it
-    geom_split_aes = aesthetics["x","y","fill"]
+    geom_split_aes = aesthetics[c("x","y","fill")]
     p <- p + geom_split_violin(groupcol, mapping = geom_split_aes, scale = scale, trim = trim)
     
     if(is.null(groupcol)){
