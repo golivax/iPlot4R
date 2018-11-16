@@ -8,13 +8,13 @@ library(data.table)
 library(stringr)
 
 plot_point = function(
-  df, xcol = NULL, ycol, varcol = NULL, xlab = NULL, ylab = NULL, use_colors = TRUE, use_shapes = FALSE, 
-  breaks_for_x = waiver(), limits_for_x = NULL, minor_breaks_for_x = waiver(), trans_for_x = "identity",
-  breaks_for_y = waiver(), limits_for_y = NULL, minor_breaks_for_y = waiver(), trans_for_y = "identity",
-  include_labels = FALSE, labelcol = varcol, labelsize = 4.0, 
-  point_color = "black", point_size = 3.0, flip = FALSE, 
-  smooth = FALSE, smooth_span = 0.75, smooth_alpha = 0.4,
-  title = NULL, fontsize = 22, outfile = NULL, pre_func = NULL){
+  df, xcol = NULL, ycol, varcol = NULL, xlab = NULL, ylab = NULL, use_colors = TRUE, 
+  use_shapes = FALSE, breaks_for_x = waiver(), limits_for_x = NULL, minor_breaks_for_x = waiver(), 
+  trans_for_x = "identity", breaks_for_y = waiver(), limits_for_y = NULL, 
+  minor_breaks_for_y = waiver(), trans_for_y = "identity", include_labels = FALSE, 
+  labelcol = varcol, labelsize = 4.0, point_color = "black", point_size = 3.0, flip = FALSE, 
+  smooth = FALSE, smooth_span = 0.75, smooth_alpha = 0.4, title = NULL, 
+  fontsize = 22, outfile = NULL, pre_func = NULL){
   
   #Prepares aesthetics
   if(is.null(xcol)){
@@ -52,11 +52,13 @@ plot_point = function(
     p <- p + scale_color_manual(values = rep(brewer.pal(n = 8, "Dark2"),reps))
   }
   else{
-    p <- p + scale_x_continuous(breaks=breaks_for_x, minor_breaks = minor_breaks_for_x, trans = trans_for_x)  
+    p <- p + scale_x_continuous(
+      breaks=breaks_for_x, minor_breaks = minor_breaks_for_x, trans = trans_for_x)  
   }
   
   if(!is.factor(df[[ycol]])){
-    p <- p + scale_y_continuous(breaks=breaks_for_y, minor_breaks = minor_breaks_for_y, trans = trans_for_y)
+    p <- p + scale_y_continuous(
+      breaks=breaks_for_y, minor_breaks = minor_breaks_for_y, trans = trans_for_y)
   }
   else{
     p <- p + scale_y_discrete(limits = levels(df[[ycol]]))
@@ -128,7 +130,7 @@ plot_line = function(
   }
   
   p <- ggplot(df, aesthetics, environment = environment()) 
- 
+  
   p <- p + xlab(xlab) + ylab(ylab)
   p <- p + guides(colour = FALSE)
   
@@ -192,7 +194,7 @@ plot_bubble = function(
   include_labels = FALSE, labelsize = 4.0, title = NULL, smooth = FALSE, fontsize = 22, 
   legend_position = "right", outfile = NULL){
   
- 
+  
   aesthetics <- aes_string(x = xcol, y = ycol, size = sizecol)
   p <- ggplot(df, aesthetics, environment = environment()) 
   
@@ -203,11 +205,15 @@ plot_bubble = function(
     p <- p + scale_x_discrete(limits = levels(df[[xcol]]))
   }
   else{
-    p <- p + scale_x_continuous(breaks=breaks_for_x, minor_breaks = minor_breaks_for_x, trans = trans_for_x)  
+    p <- p + scale_x_continuous(breaks=breaks_for_x, 
+                                minor_breaks = minor_breaks_for_x, 
+                                trans = trans_for_x)  
   }
   
   if(!is.factor(df[[ycol]])){
-    p <- p + scale_y_continuous(breaks=breaks_for_y, minor_breaks = minor_breaks_for_y, trans = trans_for_y)
+    p <- p + scale_y_continuous(breaks=breaks_for_y, 
+                                minor_breaks = minor_breaks_for_y, 
+                                trans = trans_for_y)
   }
   else{
     p <- p + scale_y_discrete(limits = levels(df[[ycol]]))
@@ -246,9 +252,9 @@ plot_bubble = function(
 
 plot_hexbin = function(
   df, xcol = NULL, ycol, numbins = 30, xlab = NULL, ylab = NULL,
-  breaks_for_x = waiver(), limits_for_x = NULL, minor_breaks_for_x = waiver(), trans_for_x = "identity",
-  breaks_for_y = waiver(), limits_for_y = NULL, minor_breaks_for_y = waiver(), trans_for_y = "identity",
-  flip = FALSE, 
+  breaks_for_x = waiver(), limits_for_x = NULL, minor_breaks_for_x = waiver(), 
+  trans_for_x = "identity", breaks_for_y = waiver(), limits_for_y = NULL, 
+  minor_breaks_for_y = waiver(), trans_for_y = "identity", flip = FALSE, 
   smooth = FALSE, smooth_span = 0.75, smooth_alpha = 0.4,
   title = NULL, fontsize = 22, outfile = NULL, pre_func = NULL){
   
@@ -271,14 +277,18 @@ plot_hexbin = function(
     p <- p + scale_x_discrete(limits = levels(df[[xcol]]))
   }
   else{
-    p <- p + scale_x_continuous(breaks=breaks_for_x, minor_breaks = minor_breaks_for_x, trans = trans_for_x)  
+    p <- p + scale_x_continuous(breaks=breaks_for_x, 
+                                minor_breaks = minor_breaks_for_x, 
+                                trans = trans_for_x)  
   }
   
   if(is.factor(df[[ycol]])){
     p <- p + scale_y_discrete(limits = levels(df[[ycol]]))
   }
   else{
-    p <- p + scale_y_continuous(breaks=breaks_for_y, minor_breaks = minor_breaks_for_y, trans = trans_for_y)
+    p <- p + scale_y_continuous(breaks=breaks_for_y, 
+                                minor_breaks = minor_breaks_for_y, 
+                                trans = trans_for_y)
   }
   
   p <- p + coord_cartesian(xlim = limits_for_x, ylim = limits_for_y)
@@ -310,9 +320,9 @@ plot_hexbin = function(
 #Plots a frequency histogram. The function calculates the frequencies based
 #on the raw observations from datacol
 plot_histogram =  function(
-  df, datacol, breaks_for_x = NULL, trim = TRUE, xlab = NULL, ylab = NULL, type = "frequency", space_between_bars = 0.1,
-  xticklab = NULL, limits_for_x = NULL, breaks_for_y = waiver(), limits_for_y = NULL, title = NULL, outfile = NULL,
-  fontsize = 22){
+  df, datacol, breaks_for_x = NULL, trim = TRUE, xlab = NULL, ylab = NULL, type = "frequency", 
+  space_between_bars = 0.1, xticklab = NULL, limits_for_x = NULL, breaks_for_y = waiver(), 
+  limits_for_y = NULL, title = NULL, outfile = NULL, fontsize = 22){
   
   n <- nrow(df)
   data <- df[[datacol]]
@@ -378,9 +388,10 @@ plot_histogram =  function(
 
 #Plot whatever value is passed to it without performing any computation
 plot_barchart = function(
-  df, xcol, ycol, groupcol = NULL, flip = FALSE, showvalues = TRUE, values_size = 6, position = "stack", breaks_for_x = NULL, 
-  trim = TRUE, xlab = NULL, ylab = NULL, space_between_bars = 0.1, xticklab = NULL, limits_for_x = NULL, 
-  breaks_for_y = waiver(), limits_for_y = NULL, title = NULL, show_legend = TRUE, legend_title = groupcol, 
+  df, xcol, ycol, groupcol = NULL, flip = FALSE, showvalues = TRUE, values_size = 6, 
+  position = "stack", breaks_for_x = NULL, trim = TRUE, xlab = NULL, ylab = NULL, 
+  space_between_bars = 0.1, xticklab = NULL, limits_for_x = NULL, breaks_for_y = waiver(), 
+  limits_for_y = NULL, title = NULL, show_legend = TRUE, legend_title = groupcol, 
   legend_labels = waiver(), legend_position = "right", outfile = NULL, fontsize = 22){
   
   categories <- df[[xcol]]
@@ -391,20 +402,24 @@ plot_barchart = function(
     groups <- as.factor(df[[groupcol]])
     groups <- factor(groups, levels=rev(levels(groups)))
     
-    p <- ggplot(df, aes(x=categories, y=values, fill = groups, label=values), environment = environment()) 
+    p <- ggplot(df, aes(x=categories, y=values, fill = groups, label=values), 
+                environment = environment()) 
   }
   else{
     p <- ggplot(df, aes(x=categories, y=values, label=values), environment = environment()) 
   }
   
   p <- p + geom_col(width = 1 - space_between_bars, position = position)
-    
+  
   if(showvalues == TRUE){
     if(position == "stack"){
-      p <- p + geom_text(size = values_size, position = position_stack(vjust = 0.5))  
+      p <- p + geom_text(size = values_size, 
+                         position = position_stack(vjust = 0.5))  
     }
     else if(position == "dodge"){
-      p <- p + geom_text(size = values_size, position = position_dodge(1 - space_between_bars), vjust = -0.3)  
+      p <- p + geom_text(size = values_size, 
+                         position = position_dodge(1 - space_between_bars), 
+                         vjust = -0.3)  
     }
   }
   
@@ -437,15 +452,14 @@ plot_barchart = function(
     
     if(show_legend == TRUE){
       p <- p + scale_fill_discrete(labels = legend_labels, l = 85, c = 40)
-      p <- p + theme(legend.position = legend_position, 
-                     legend.margin=margin(t = 0, unit='cm'))
+      p <- p + theme(legend.position = legend_position, legend.margin=margin(t = 0, unit='cm'))
       p <- p + guides(fill = guide_legend(title = legend_title, reverse = FALSE))  
     }
     else{
       p <- p + guides(fill = FALSE)
     }
   }
-   
+  
   print_plot(p,outfile)
 }
 
@@ -453,11 +467,11 @@ plot_barchart = function(
 #(e.g., datacol = c("A","A","A","B","C")). If a group col is provided, then
 #a stacked bars are produced
 plot_freqhistogram_categorical = function(
-  df, categorycol, groupcol = NULL, binwidth = NULL, breaks_for_y = waiver(), limits_for_y = NULL, title = NULL, 
-  outfile = NULL){
+  df, categorycol, groupcol = NULL, binwidth = NULL, breaks_for_y = waiver(), 
+  limits_for_y = NULL, title = NULL, outfile = NULL){
   
   data <- df[[categorycol]]
- 
+  
   if(is.null(groupcol)){
     p <- ggplot(df, aes(x=data), environment = environment()) 
   }
@@ -476,23 +490,24 @@ plot_freqhistogram_categorical = function(
 }
 
 plot_boxplot = function(
-  df, xcol = NULL, ycol, groupcol = NULL, facetcol = NULL, xlab = NULL, ylab = NULL, facetlabs = NULL, 
-  colored_groups = FALSE, xticklab = NULL, breaks_for_y = waiver(), limits_for_y = NULL, 
-  trans_for_y = "identity", flip = FALSE, flip_facet = FALSE, facet_spacing = 1, show_legend = TRUE, 
-  legend_title = groupcol, legend_labels = waiver(), legend_position = "right", title = NULL, outfile = NULL, 
-  fontsize = 22){
+  df, xcol = NULL, ycol, groupcol = NULL, facetcol = NULL, xlab = xcol, ylab = ycol, 
+  facetlabs = NULL, colored_groups = FALSE, xticklab = NULL, breaks_for_y = waiver(), 
+  limits_for_y = NULL, trans_for_y = "identity", flip = FALSE, flip_facet = FALSE, 
+  facet_spacing = 1, show_legend = TRUE, legend_title = groupcol, legend_labels = waiver(), 
+  legend_position = "right", title = NULL, outfile = NULL, fontsize = 22){
   
   #Prepares aesthetics
-  if(is.null(xcol)){
-    aesthetics <- aes_string(x = as.factor(""), y = ycol)
+  if(is.null(xcol) & is.null(groupcol)){
+    aesthetics <- aes_string(y = ycol)
+  }
+  else if(!is.null(xcol) & is.null(groupcol)){
+    aesthetics <- aes_string(x = xcol, y = ycol)
+  }
+  else if(is.null(xcol) & !is.null(groupcol)){
+    aesthetics <- aes_string(y = ycol, fill = groupcol)
   }
   else{
-    if(is.null(groupcol)){
-      aesthetics <- aes_string(x = xcol, y = ycol)
-    }
-    else{
-      aesthetics <- aes_string(x = xcol, y = ycol, fill = groupcol)  
-    }
+    aesthetics <- aes_string(x = xcol, y = ycol, fill = groupcol)
   }
   
   #If xcol is given, then it should map to a factor column
@@ -585,34 +600,33 @@ plot_boxplot = function(
 }
 
 plot_violin = function(
-  df, xcol = NULL, ycol, groupcol = NULL, facetcol = NULL, xlab = xcol, ylab = ycol, facetlabs = NULL, 
-  colored_groups = FALSE, xticklab = NULL, trim = TRUE,  split = FALSE, limits_for_y = NULL, breaks_for_y = waiver(), 
-  showboxplot = FALSE, boxplot_width = 0.1, dodge_width = 0.9, scale = "area", transformation = "identity", 
-  flip = FALSE, flip_facet = FALSE, show_legend = TRUE, legend_title = groupcol, legend_labels = waiver(), 
-  legend_position = "right", outfile = NULL, title = NULL, fontsize = 22){
+  df, xcol = NULL, ycol, groupcol = NULL, facetcol = NULL, xlab = xcol, ylab = ycol, 
+  facetlabs = NULL, colored_groups = FALSE, xticklab = NULL, trim = TRUE,  split = FALSE, 
+  limits_for_y = NULL, breaks_for_y = waiver(), showboxplot = FALSE, boxplot_width = 0.1, 
+  dodge_width = 0.9, scale = "area", transformation = "identity", flip = FALSE, flip_facet = FALSE, 
+  show_legend = TRUE, legend_title = groupcol, legend_labels = waiver(), legend_position = "right", 
+  outfile = NULL, title = NULL, fontsize = 22){
   
   #Sets the dodge (space between plots from the same group)
   dodge <- position_dodge(width = dodge_width)
   
-  #Prepares aesthetics
+  #Prepares aesthetics. For violin plot, xcol is always needed (because of split violin and 
+  #summary stats). If user does not provide xcol, we create a dummy one
   if(is.null(xcol)){
-    aesthetics <- aes_string(x = as.factor(""), y = ycol)
-  }
-  else{
-    if(is.null(groupcol)){
-      aesthetics <- aes_string(x = xcol, y = ycol)
-    }
-    else{
-      aesthetics <- aes_string(x = xcol, y = ycol, fill = groupcol)  
-    }
+    xcol = as.factor("")
   }
   
-  #If xcol is given, then it should map to a factor column
-  if(!is.null(xcol)){
-    if(!is.factor(df[[xcol]])){
-      #Labels are given in the order they appear in the data (because of 'unique')
-      df[[xcol]] <- factor(df[[xcol]], levels = unique(df[[xcol]]))
-    }
+  if(is.null(groupcol)){
+    aesthetics <- aes_string(x = xcol, y = ycol)
+  }
+  else{
+    aesthetics <- aes_string(x = xcol, y = ycol, fill = groupcol)
+  }
+  
+  #xcol should map to a factor column
+  if(!is.factor(df[[xcol]])){
+    #Labels are given in the order they appear in the data (because of 'unique')
+    df[[xcol]] <- factor(df[[xcol]], levels = unique(df[[xcol]]))
   }
   
   #Same thing for groupcol
@@ -640,7 +654,9 @@ plot_violin = function(
     
     #Adds the boxplot if requested
     if(showboxplot == TRUE){
-      p = p + geom_boxplot(width=boxplot_width, position = dodge, outlier.size = 1, outlier.alpha = 0.5, color = "gray30")  
+      p = p + geom_boxplot(
+        width=boxplot_width, position = dodge, outlier.size = 1, outlier.alpha = 0.5, 
+        color = "gray30")  
     }
     #Otherwise, add a point to denote the median
     else{
@@ -648,17 +664,18 @@ plot_violin = function(
     }
   }
   else{
-    #Split violin requires aesthetics to be in this order: "x,y,fill", so we make
-    #sure aesthetics are given in this order to it
-    geom_split_aes = aesthetics[c("x","y","fill")]
+    #Split violin requires x, y, and fill aesthetics (in this order)
+    geom_split_aes = aesthetics[c("x","y","fill")] 
     p <- p + geom_split_violin(groupcol, mapping = geom_split_aes, scale = scale, trim = trim)
     
     if(is.null(groupcol)){
-      p <- p + stat_summary(fun.y=median, geom="point", shape=23, size=3, fill = "black", position = dodge)
+      p <- p + stat_summary(
+        fun.y=median, geom="point", shape=23, size=3, fill = "black", position = dodge)
     }
     else{
       p <- p + stat_summary(
-        fun.data="plot.median", geom="errorbar", colour="grey20", width=0.90, size=0.8, position = dodge)  
+        fun.data="plot.median", geom="errorbar", colour="grey20", width=0.90, size=0.8, 
+        position = dodge)  
     }
     
   }
@@ -707,6 +724,9 @@ plot_violin = function(
   p <- p + scale_y_continuous(breaks=breaks_for_y, trans = transformation)
   
   # labels for the axes
+  if(xcol == "" & xlab == xcol){
+    xlab = NULL
+  }
   p <- p + xlab(xlab) + ylab(ylab)
   
   # title for the plot
@@ -727,8 +747,9 @@ plot.median <- function(x) {
 }
 
 geom_split_violin <- function (
-  groupcol, mapping = NULL, data = NULL, stat = "ydensity", position = "identity", ..., draw_quantiles = NULL, trim = TRUE, 
-  scale = "area", na.rm = FALSE, show.legend = NA, inherit.aes = TRUE) {
+  groupcol, mapping = NULL, data = NULL, stat = "ydensity", position = "identity", ..., 
+  draw_quantiles = NULL, trim = TRUE, scale = "area", na.rm = FALSE, show.legend = NA, 
+  inherit.aes = TRUE) {
   
   GeomSplitViolin <- ggproto(
     "GeomSplitViolin",
@@ -742,7 +763,9 @@ geom_split_violin <- function (
     
     draw_group = function(self, data, ..., draw_quantiles = NULL){
       
-      data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
+      data <- transform(
+        data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
+      
       grp <- data[1,'group']  
       
       #Debug
@@ -750,15 +773,18 @@ geom_split_violin <- function (
       #print(paste("group",grp))
       #print(paste("x",data[1,'x']))
       #print(paste("fill",data[1,'fill']))
- 
+      
       #This 'if' overrides grp to enable 'one half' violin plots when groupcol does not exist
       if(is.null(self$groupcol)){
         grp <- 1
       }
       
-      newdata <- plyr::arrange(transform(data, x = if(grp%%2==1) xminv else xmaxv), if(grp%%2==1) y else -y)
+      newdata <- plyr::arrange(
+        transform(data, x = if(grp%%2==1) xminv else xmaxv), if(grp%%2==1) y else -y)
+      
       newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
       newdata[c(1,nrow(newdata)-1,nrow(newdata)), 'x'] <- round(newdata[1, 'x']) 
+      
       if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
         stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <= 1))
         quantiles <- create_quantile_segment_frame(data, draw_quantiles)
@@ -766,10 +792,10 @@ geom_split_violin <- function (
         aesthetics$alpha <- rep(1, nrow(quantiles))
         both <- cbind(quantiles, aesthetics)
         quantile_grob <- GeomPath$draw_panel(both, ...)
-        ggplot2:::ggname("geom_split_violin", grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
+        ggname("geom_split_violin", grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
       }
       else {
-        ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
+        ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
       }
     }
   ) 
@@ -778,7 +804,10 @@ geom_split_violin <- function (
   
   layer(data = data, mapping = mapping, stat = stat, geom = GeomSplitViolin, position = position, 
         show.legend = show.legend, inherit.aes = inherit.aes, 
-        params = list(trim = trim, scale = scale, draw_quantiles = draw_quantiles, na.rm = na.rm, ...))
+        params = list(trim = trim, 
+                      scale = scale, 
+                      draw_quantiles = draw_quantiles, 
+                      na.rm = na.rm, ...))
 }
 
 #Not working
